@@ -1,6 +1,7 @@
 class Task {
   final String id;
   final String title;
+  final String? description;
   final DateTime? date;
   final String? time;
   final bool isStarred;
@@ -13,6 +14,7 @@ class Task {
   const Task({
     required this.id,
     required this.title,
+    this.description,
     this.date,
     this.time,
     this.isStarred = false,
@@ -26,6 +28,7 @@ class Task {
   Task copyWith({
     String? id,
     String? title,
+    String? description,
     DateTime? date,
     String? time,
     bool? isStarred,
@@ -38,6 +41,7 @@ class Task {
     return Task(
       id: id ?? this.id,
       title: title ?? this.title,
+      description: description ?? this.description,
       date: date ?? this.date,
       time: time ?? this.time,
       isStarred: isStarred ?? this.isStarred,
@@ -51,7 +55,7 @@ class Task {
 
   @override
   String toString() {
-    return 'Task(id: $id, title: $title, date: $date, time: $time, '
+    return 'Task(id: $id, title: $title, description: $description, date: $date, time: $time, '
         'isStarred: $isStarred, isRepeating: $isRepeating, isCompleted: $isCompleted, completedAt: $completedAt, '
         'createdAt: $createdAt, updatedAt: $updatedAt)';
   }

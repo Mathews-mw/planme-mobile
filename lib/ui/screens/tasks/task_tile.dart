@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:planme/app_routes.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -46,7 +48,10 @@ class TaskTile extends StatelessWidget {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         onTap: () {
-          print('Tapped on task: ${task.title}');
+          context.pushNamed(
+            AppRouter.taskDetails,
+            pathParameters: {'taskId': task.id},
+          );
         },
         leading: IconButton(
           onPressed: () => _onCompleteToggle(context),

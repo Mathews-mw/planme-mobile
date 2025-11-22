@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:planme/ui/screens/tasks/add_task.dart';
 import 'package:planme/ui/screens/tasks/all_tasks_completed_card.dart';
 import 'package:provider/provider.dart';
 import 'package:expandable/expandable.dart';
@@ -31,12 +32,12 @@ class _TasksScreenState extends State<TasksScreen> {
       appBar: CustomAppBar(title: 'Tasks'),
       body: SafeArea(
         child: _isLoading
-            ? Center(
+            ? const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(),
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10),
                     Text('Loading tasks...'),
                   ],
                 ),
@@ -263,6 +264,7 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ),
       ),
+      floatingActionButton: AddTask(),
     );
   }
 }

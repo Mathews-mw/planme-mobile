@@ -119,8 +119,46 @@ class TasksProvider with ChangeNotifier {
     return sections;
   }
 
-  Future<void> createTask(Task task) async {
-    _tasks.add(task);
+  Future<Task> getTaskDetails(String taskId) async {
+    final task = _tasks.firstWhere((task) => task.id == taskId);
+
+    return task;
+  }
+
+  Future<void> createTask({
+    required String title,
+    String? description,
+    DateTime? date,
+    TimeOfDay? time,
+  }) async {
+    DateTime? taskDate;
+
+    if (date != null && time == null) {
+      taskDate = DateTime(date.year, date.month, date.day);
+    }
+
+    if (date != null && time != null) {
+      taskDate = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    }
+
+    final newTask = Task(
+      id: Uuid().v4(),
+      title: title,
+      description: description,
+      date: taskDate,
+      time: time != null
+          ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+          : null,
+      createdAt: DateTime.now(),
+    );
+
+    _tasks.add(newTask);
     notifyListeners();
   }
 

@@ -42,7 +42,12 @@ class CompletedTaskTile extends StatelessWidget {
           icon: Icon(Icons.check, size: 22, color: AppColors.purpleBase),
           tooltip: 'Mark task as uncompleted',
         ),
-        title: Text(task.title, style: theme.textTheme.bodyMedium),
+        title: Text(
+          task.title,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            decoration: TextDecoration.lineThrough,
+          ),
+        ),
         subtitle: Text(
           'Completed: ${DateFormat('yMMMd').format(task.completedAt!)}',
           style: theme.textTheme.bodySmall?.copyWith(
