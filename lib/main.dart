@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:planme/app_routes.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'package:planme/app_routes.dart';
 import 'package:planme/theme/theme.dart';
 import 'package:planme/providers/tasks_provider.dart';
+import 'package:planme/providers/subtasks_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,23 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => TasksProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => SubtasksProvider()),
+        // TasksProvider needs the SubtasksProvider
+        ChangeNotifierProxyProvider<SubtasksProvider, TasksProvider>(
+          create: (context) {
+            final subtasks = Provider.of<SubtasksProvider>(
+              context,
+              listen: false,
+            );
+            return TasksProvider(subtasksProvider: subtasks);
+          },
+          update: (context, subtasks, previous) {
+            // se quiser atualizar a referência depois:
+            return previous ?? TasksProvider(subtasksProvider: subtasks);
+          },
+        ),
+      ],
       child: MaterialApp.router(
         title: 'Plan Me',
         debugShowCheckedModeBanner: false,

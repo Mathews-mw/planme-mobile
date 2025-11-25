@@ -1,11 +1,18 @@
 import 'package:intl/intl.dart';
+import 'package:planme/data/models/aggregates/task_details.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 
 import 'package:planme/data/models/task.dart';
 import 'package:planme/data/models/task_section.dart';
+import 'package:planme/providers/subtasks_provider.dart';
+import 'package:planme/ui/screens/task_details/task_details_state.dart';
 
 class TasksProvider with ChangeNotifier {
+  final SubtasksProvider subtasksProvider;
+
+  TasksProvider({required this.subtasksProvider});
+
   final uuid = Uuid();
 
   // List<Task> _tasks = [];
@@ -22,6 +29,7 @@ class TasksProvider with ChangeNotifier {
     Task(
       id: Uuid().v4(),
       title: 'Cancelar gamepass',
+      description: 'Cancelar a assinatura do gamepass.',
       date: DateTime(2025, 11, 20, 20, 0),
       time: '20:00',
       createdAt: DateTime.now(),
@@ -77,6 +85,9 @@ class TasksProvider with ChangeNotifier {
   List<Task> get completedTasks =>
       _tasks.where((task) => task.isCompleted).toList(growable: false);
 
+  TaskDetailsState _detailsState = const TaskDetailsState();
+  TaskDetailsState get detailsState => _detailsState;
+
   List<TaskSection> get taskSections {
     final completedTasksOnly = activeTasks;
 
@@ -95,8 +106,6 @@ class TasksProvider with ChangeNotifier {
     }
 
     List<TaskSection> sections = sectionsMap.entries.map((entry) {
-      print('entry key: ${entry.key}');
-
       String label = entry.key == 'No Date'
           ? 'No Date'
           : DateFormat('yMMMEd').format(DateTime.parse(entry.key));
@@ -123,6 +132,20 @@ class TasksProvider with ChangeNotifier {
     final task = _tasks.firstWhere((task) => task.id == taskId);
 
     return task;
+  }
+
+  Future<void> loadTaskDetails(String taskId) async {
+    _detailsState = const TaskDetailsState(isLoading: true);
+    notifyListeners();
+
+    try {
+      final task = await getTaskDetails(taskId);
+      _detailsState = TaskDetailsState(task: task);
+    } catch (e) {
+      _detailsState = TaskDetailsState(error: e);
+    }
+
+    notifyListeners();
   }
 
   Future<void> createTask({
@@ -159,6 +182,67 @@ class TasksProvider with ChangeNotifier {
     );
 
     _tasks.add(newTask);
+    notifyListeners();
+  }
+
+  Future<void> editTask({
+    required String taskId,
+    String? title,
+    String? description,
+    DateTime? date,
+    TimeOfDay? time,
+  }) async {
+    final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
+
+    if (taskIndex == -1) {
+      throw Exception('Task not found');
+    }
+
+    final current = _tasks[taskIndex];
+
+    DateTime? taskDate;
+
+    if (date != null && time == null) {
+      taskDate = DateTime(date.year, date.month, date.day);
+    }
+
+    if (date != null && time != null) {
+      taskDate = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    }
+
+    _tasks[taskIndex] = current.copyWith(
+      title: title ?? current.title,
+      description: description ?? current.description,
+      date: taskDate ?? current.date,
+      time: time != null
+          ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+          : current.time,
+      updatedAt: DateTime.now(),
+    );
+
+    // notifyListeners();
+    await loadTaskDetails(taskId);
+  }
+
+  Future<void> deleteTask(String taskId) async {
+    await subtasksProvider.deleteAllByTaskId(taskId);
+
+    _tasks.removeWhere((task) => task.id == taskId);
+
+    notifyListeners();
+  }
+
+  Future<void> restoreTask(TaskDetails taskDetails) async {
+    _tasks.add(taskDetails.task);
+
+    await subtasksProvider.restoreSubtasks(taskDetails.subtasks);
+
     notifyListeners();
   }
 

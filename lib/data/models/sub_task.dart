@@ -1,55 +1,39 @@
-import 'package:planme/data/models/sub_task.dart';
-
-class Task {
+class SubTask {
   final String id;
+  final String taskId;
   final String title;
   final String? description;
-  final DateTime? date;
-  final String? time;
-  final bool isStarred;
-  final bool isRepeating;
   final bool isCompleted;
   final DateTime? completedAt;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  final List<SubTask>? subTasks;
 
-  const Task({
+  const SubTask({
     required this.id,
+    required this.taskId,
     required this.title,
     this.description,
-    this.date,
-    this.time,
-    this.isStarred = false,
-    this.isRepeating = false,
     this.isCompleted = false,
     this.completedAt,
     required this.createdAt,
     this.updatedAt,
-    this.subTasks,
   });
 
-  Task copyWith({
+  SubTask copyWith({
     String? id,
+    String? taskId,
     String? title,
     String? description,
-    DateTime? date,
-    String? time,
-    bool? isStarred,
-    bool? isRepeating,
     bool? isCompleted,
     DateTime? completedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
-    return Task(
+    return SubTask(
       id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
       title: title ?? this.title,
       description: description ?? this.description,
-      date: date ?? this.date,
-      time: time ?? this.time,
-      isStarred: isStarred ?? this.isStarred,
-      isRepeating: isRepeating ?? this.isRepeating,
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
       createdAt: createdAt ?? this.createdAt,
@@ -59,8 +43,8 @@ class Task {
 
   @override
   String toString() {
-    return 'Task(id: $id, title: $title, description: $description, date: $date, time: $time, '
-        'isStarred: $isStarred, isRepeating: $isRepeating, isCompleted: $isCompleted, completedAt: $completedAt, '
+    return 'SubTask(id: $id, taskId: $taskId, title: $title, description: $description, '
+        'isCompleted: $isCompleted, completedAt: $completedAt, '
         'createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 }

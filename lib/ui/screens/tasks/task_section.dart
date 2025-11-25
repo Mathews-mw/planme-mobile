@@ -10,12 +10,14 @@ class TaskSectionWidget extends StatelessWidget {
   final TaskSection section;
   final bool isLast;
   final bool dimmed;
+  final Future<void> Function(String taskId) onNavigateToTaskDetails;
 
   const TaskSectionWidget({
     super.key,
     required this.section,
     required this.isLast,
     this.dimmed = false,
+    required this.onNavigateToTaskDetails,
   });
 
   @override
@@ -64,7 +66,12 @@ class TaskSectionWidget extends StatelessWidget {
                 curve: Curves.easeOut,
                 child: Opacity(
                   opacity: dimmed ? 0.6 : 1.0,
-                  child: TaskTile(task: task),
+                  child: TaskTile(
+                    task: task,
+                    onNavigateToTaskDetails: (String taskId) async {
+                      await onNavigateToTaskDetails(taskId);
+                    },
+                  ),
                 ),
               );
             },
@@ -74,7 +81,10 @@ class TaskSectionWidget extends StatelessWidget {
                 curve: Curves.easeIn,
                 child: Opacity(
                   opacity: dimmed ? 0.6 : 1.0,
-                  child: TaskTile(task: oldTask),
+                  child: TaskTile(
+                    task: oldTask,
+                    onNavigateToTaskDetails: onNavigateToTaskDetails,
+                  ),
                 ),
               );
             },

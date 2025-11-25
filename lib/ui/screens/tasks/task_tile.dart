@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:planme/app_routes.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -10,8 +8,13 @@ import 'package:planme/providers/tasks_provider.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
+  final Future<void> Function(String taskId) onNavigateToTaskDetails;
 
-  const TaskTile({super.key, required this.task});
+  const TaskTile({
+    super.key,
+    required this.task,
+    required this.onNavigateToTaskDetails,
+  });
 
   Future<void> _onStarToggle(BuildContext context) async {
     try {
@@ -47,11 +50,8 @@ class TaskTile extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: ListTile(
         contentPadding: EdgeInsets.zero,
-        onTap: () {
-          context.pushNamed(
-            AppRouter.taskDetails,
-            pathParameters: {'taskId': task.id},
-          );
+        onTap: () async {
+          await onNavigateToTaskDetails(task.id);
         },
         leading: IconButton(
           onPressed: () => _onCompleteToggle(context),

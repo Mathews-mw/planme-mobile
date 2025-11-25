@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:planme/ui/screens/tasks/add_task.dart';
-import 'package:planme/ui/screens/tasks/all_tasks_completed_card.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:expandable/expandable.dart';
 import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
+import 'package:planme/app_routes.dart';
 import 'package:planme/data/models/task.dart';
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/data/models/task_section.dart';
 import 'package:planme/components/custom_app_bar.dart';
+import 'package:planme/ui/screens/tasks/add_task.dart';
 import 'package:planme/ui/screens/tasks/task_section.dart';
 import 'package:planme/ui/screens/tasks/no_tasks_card.dart';
+import 'package:planme/data/models/aggregates/task_details.dart';
 import 'package:planme/ui/screens/tasks/completed_task_tile.dart';
+import 'package:planme/ui/screens/tasks/all_tasks_completed_card.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -24,6 +27,36 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   bool _isLoading = false;
+
+  Future<void> _navigateToTaskDetails(String taskId) async {
+    final result = await context.pushNamed<(bool, TaskDetails?)>(
+      AppRouter.taskDetails,
+      pathParameters: {'taskId': taskId},
+    );
+
+    print('Is task deleted: $result');
+
+    if (!mounted) return;
+
+    if (result != null && result.$1) {
+      final deletedTask = result.$2;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Task deleted'),
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () async {
+              if (deletedTask != null) {
+                await context.read<TasksProvider>().restoreTask(deletedTask);
+              }
+            },
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +167,12 @@ class _TasksScreenState extends State<TasksScreen> {
                                         child: TaskSectionWidget(
                                           section: taskSection,
                                           isLast: isLast,
+                                          onNavigateToTaskDetails:
+                                              (String taskId) async {
+                                                await _navigateToTaskDetails(
+                                                  taskId,
+                                                );
+                                              },
                                         ),
                                       );
                                     },
@@ -145,6 +184,12 @@ class _TasksScreenState extends State<TasksScreen> {
                                         child: TaskSectionWidget(
                                           section: oldTaskSection,
                                           isLast: false,
+                                          onNavigateToTaskDetails:
+                                              (String taskId) async {
+                                                await _navigateToTaskDetails(
+                                                  taskId,
+                                                );
+                                              },
                                         ),
                                       );
                                     },
