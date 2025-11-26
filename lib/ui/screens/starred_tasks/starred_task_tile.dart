@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -6,11 +7,11 @@ import 'package:planme/data/models/task.dart';
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/providers/tasks_provider.dart';
 
-class TaskTile extends StatelessWidget {
+class StarredTaskTile extends StatelessWidget {
   final Task task;
   final Future<void> Function(String taskId) onNavigateToTaskDetails;
 
-  const TaskTile({
+  const StarredTaskTile({
     super.key,
     required this.task,
     required this.onNavigateToTaskDetails,
@@ -62,15 +63,23 @@ class TaskTile extends StatelessWidget {
         ),
         title: Text(
           task.title,
-          style: theme.textTheme.bodyMedium,
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
+          style: theme.textTheme.bodyMedium,
         ),
-        subtitle: task.time != null
-            ? Row(
+        subtitle: Row(
+          children: [
+            Text(
+              task.date != null
+                  ? DateFormat.yMMMEd().format(task.date!)
+                  : 'No date',
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.blue),
+            ),
+            if (task.time != null)
+              Row(
                 children: [
                   Text(
-                    task.time!,
+                    ' - ${task.time!}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.blue,
                     ),
@@ -80,8 +89,9 @@ class TaskTile extends StatelessWidget {
                     Icon(PhosphorIcons.repeat(), size: 16, color: Colors.blue),
                   ],
                 ],
-              )
-            : null,
+              ),
+          ],
+        ),
         trailing: IconButton(
           onPressed: () => _onStarredToggle(context),
           icon: Icon(

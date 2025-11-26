@@ -44,6 +44,8 @@ class CompletedTaskTile extends StatelessWidget {
         ),
         title: Text(
           task.title,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
           style: theme.textTheme.bodyMedium?.copyWith(
             decoration: TextDecoration.lineThrough,
           ),

@@ -75,6 +75,13 @@ class TasksProvider with ChangeNotifier {
       isRepeating: false,
       createdAt: DateTime.now(),
     ),
+    Task(
+      id: Uuid().v4(),
+      title:
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+      isRepeating: false,
+      createdAt: DateTime.now(),
+    ),
   ];
 
   List<Task> get tasks => List.unmodifiable(_tasks);
@@ -84,6 +91,9 @@ class TasksProvider with ChangeNotifier {
 
   List<Task> get completedTasks =>
       _tasks.where((task) => task.isCompleted).toList(growable: false);
+
+  List<Task> get starredTasks =>
+      _tasks.where((task) => task.isStarred).toList(growable: false);
 
   TaskDetailsState _detailsState = const TaskDetailsState();
   TaskDetailsState get detailsState => _detailsState;

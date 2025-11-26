@@ -5,7 +5,7 @@ import 'package:expandable/expandable.dart';
 import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
-import 'package:planme/app_routes.dart';
+import 'package:planme/app_router.dart';
 import 'package:planme/data/models/task.dart';
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/providers/tasks_provider.dart';
@@ -13,10 +13,10 @@ import 'package:planme/data/models/task_section.dart';
 import 'package:planme/components/custom_app_bar.dart';
 import 'package:planme/ui/screens/tasks/add_task.dart';
 import 'package:planme/ui/screens/tasks/task_section.dart';
-import 'package:planme/ui/screens/tasks/no_tasks_card.dart';
+import 'package:planme/components/no_tasks_card.dart';
 import 'package:planme/data/models/aggregates/task_details.dart';
 import 'package:planme/ui/screens/tasks/completed_task_tile.dart';
-import 'package:planme/ui/screens/tasks/all_tasks_completed_card.dart';
+import 'package:planme/components/all_tasks_completed_card.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -33,8 +33,6 @@ class _TasksScreenState extends State<TasksScreen> {
       AppRouter.taskDetails,
       pathParameters: {'taskId': taskId},
     );
-
-    print('Is task deleted: $result');
 
     if (!mounted) return;
 
@@ -62,7 +60,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: CustomAppBar(title: 'Tasks'),
+      extendBody: true,
       body: SafeArea(
         child: _isLoading
             ? const Center(

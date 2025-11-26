@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:planme/app_routes.dart';
+import 'package:planme/app_router.dart';
 import 'package:planme/theme/theme.dart';
 import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/providers/subtasks_provider.dart';

@@ -8,7 +8,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
-import 'package:planme/app_routes.dart';
+import 'package:planme/app_router.dart';
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/data/models/sub_task.dart';
 import 'package:planme/providers/tasks_provider.dart';
@@ -159,9 +159,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: CustomAppBar(
-        title: 'Task Details',
-        showAvatar: false,
+      appBar: AppBar(
+        title: Text('Task Details'),
         actions: [
           IconButton(
             onPressed: () => _onStarToggle(context),
@@ -270,6 +269,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
                       PhosphorIcons.note(),
@@ -277,11 +277,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       size: 28,
                     ),
                     const SizedBox(width: 10),
-                    Text(
-                      taskDetails.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
+                    Expanded(
+                      child: Text(
+                        taskDetails.title,
+                        softWrap: true,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
                       ),
                     ),
                   ],

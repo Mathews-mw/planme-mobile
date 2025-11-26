@@ -140,6 +140,7 @@ class _AddTaskState extends State<AddTask> with FormValidationsMixin {
         showModalBottomSheet<void>(
           useSafeArea: true,
           showDragHandle: true,
+          isScrollControlled: true,
           backgroundColor: Colors.white,
           context: context,
           builder: (BuildContext context) {

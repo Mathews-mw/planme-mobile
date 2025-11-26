@@ -74,6 +74,7 @@ flutter:
   assets:
     - assets/images/to_do_notes.png
     - assets/images/zero_tasks.png
+    - assets/images/starred.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
