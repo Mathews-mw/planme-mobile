@@ -8,11 +8,13 @@ import 'package:planme/providers/tasks_provider.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
+  final DateTime? scheduledAt;
   final Future<void> Function(String taskId) onNavigateToTaskDetails;
 
   const TaskTile({
     super.key,
     required this.task,
+    this.scheduledAt,
     required this.onNavigateToTaskDetails,
   });
 
@@ -42,6 +44,15 @@ class TaskTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final timeText = scheduledAt != null
+        ? '${scheduledAt!.hour.toString().padLeft(2, '0')}:${scheduledAt!.minute.toString().padLeft(2, '0')}'
+        : null;
+
+    final next = context.read<TasksProvider>().getNextOccurrenceForTask(
+      task,
+      from: scheduledAt,
+    );
+
     return Material(
       color: Colors.transparent,
       shape: const RoundedRectangleBorder(
@@ -66,11 +77,11 @@ class TaskTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
         ),
-        subtitle: task.time != null
+        subtitle: timeText != null
             ? Row(
                 children: [
                   Text(
-                    task.time!,
+                    timeText!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.blue,
                     ),

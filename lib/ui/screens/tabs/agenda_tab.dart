@@ -10,23 +10,59 @@ import 'package:planme/data/models/task.dart';
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/data/models/task_section.dart';
-import 'package:planme/components/custom_app_bar.dart';
-import 'package:planme/ui/screens/tasks/add_task.dart';
-import 'package:planme/ui/screens/tasks/task_section.dart';
 import 'package:planme/components/no_tasks_card.dart';
+import 'package:planme/components/task_section_widget.dart';
 import 'package:planme/data/models/aggregates/task_details.dart';
-import 'package:planme/ui/screens/tasks/completed_task_tile.dart';
 import 'package:planme/components/all_tasks_completed_card.dart';
+import 'package:planme/ui/screens/tabs/components/completed_task_tile.dart';
 
-class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+class AgendaTab extends StatefulWidget {
+  const AgendaTab({super.key});
 
   @override
-  State<TasksScreen> createState() => _TasksScreenState();
+  State<AgendaTab> createState() => _AgendaTabState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
+class _AgendaTabState extends State<AgendaTab> {
   bool _isLoading = false;
+  late DateTime _rangeStart;
+  late DateTime _rangeEnd;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final now = DateTime.now();
+    _rangeStart = DateTime(now.year, now.month, now.day); // hoje 00:00
+    _rangeEnd = _rangeStart.add(const Duration(days: 7)); // próximos 7 dias
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTasksForCurrentRange();
+    });
+  }
+
+  Future<void> _loadTasksForCurrentRange() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final tasksProvider = context.read<TasksProvider>();
+
+      await tasksProvider.loadTaskSectionsForRange(
+        from: _rangeStart,
+        to: _rangeEnd,
+      );
+    } catch (e) {
+      debugPrint('Error loading tasks sections: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Error loading tasks')));
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   Future<void> _navigateToTaskDetails(String taskId) async {
     final result = await context.pushNamed<(bool, TaskDetails?)>(
@@ -54,6 +90,9 @@ class _TasksScreenState extends State<TasksScreen> {
         ),
       );
     }
+
+    // se você quiser recarregar depois de voltar (por caso de edição),
+    // pode chamar _loadTasksForCurrentRange() de novo aqui.
   }
 
   @override
@@ -85,7 +124,6 @@ class _TasksScreenState extends State<TasksScreen> {
 
                     return Column(
                       children: [
-                        // Active tasks section
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
@@ -94,6 +132,7 @@ class _TasksScreenState extends State<TasksScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Header "My Tasks"
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 4,
@@ -148,7 +187,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                   completedTasks.isNotEmpty)
                                 const AllTasksCard(),
 
-                              // Active tasks list
+                              // Section list
                               ImplicitlyAnimatedList<TaskSection>(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -307,7 +346,6 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ),
       ),
-      floatingActionButton: AddTask(),
     );
   }
 }

@@ -2,21 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
-import 'package:planme/data/models/task.dart';
+import 'package:planme/components/task_tile.dart';
 import 'package:planme/data/models/task_section.dart';
-import 'package:planme/ui/screens/tasks/task_tile.dart';
+import 'package:planme/data/models/task_occurrence.dart';
 
 class TaskSectionWidget extends StatelessWidget {
   final TaskSection section;
   final bool isLast;
-  final bool dimmed;
   final Future<void> Function(String taskId) onNavigateToTaskDetails;
 
   const TaskSectionWidget({
     super.key,
     required this.section,
     required this.isLast,
-    this.dimmed = false,
     required this.onNavigateToTaskDetails,
   });
 
@@ -44,6 +42,7 @@ class TaskSectionWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // label da seção (data)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
@@ -54,37 +53,40 @@ class TaskSectionWidget extends StatelessWidget {
             ),
           ),
 
-          // Lista animada de tasks dentro da seção
-          ImplicitlyAnimatedList<Task>(
+          // Lista animada de occurrences dentro da seção
+          ImplicitlyAnimatedList<TaskOccurrence>(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            items: section.tasks,
-            areItemsTheSame: (a, b) => a.id == b.id,
-            itemBuilder: (context, animation, task, index) {
+            items: section.items,
+            areItemsTheSame: (a, b) {
+              if (a.task.id != b.task.id) return false;
+
+              final aDate = a.scheduledAt;
+              final bDate = b.scheduledAt;
+
+              if (aDate == null && bDate == null) return true;
+              if (aDate == null || bDate == null) return false;
+
+              return aDate.isAtSameMomentAs(bDate);
+            },
+            itemBuilder: (context, animation, occurrence, index) {
               return SizeFadeTransition(
                 animation: animation,
                 curve: Curves.easeOut,
-                child: Opacity(
-                  opacity: dimmed ? 0.6 : 1.0,
-                  child: TaskTile(
-                    task: task,
-                    onNavigateToTaskDetails: (String taskId) async {
-                      await onNavigateToTaskDetails(taskId);
-                    },
-                  ),
+                child: TaskTile(
+                  task: occurrence.task,
+                  scheduledAt: occurrence.scheduledAt,
+                  onNavigateToTaskDetails: onNavigateToTaskDetails,
                 ),
               );
             },
-            removeItemBuilder: (context, animation, oldTask) {
+            removeItemBuilder: (context, animation, oldOccurrence) {
               return SizeFadeTransition(
                 animation: animation,
                 curve: Curves.easeIn,
-                child: Opacity(
-                  opacity: dimmed ? 0.6 : 1.0,
-                  child: TaskTile(
-                    task: oldTask,
-                    onNavigateToTaskDetails: onNavigateToTaskDetails,
-                  ),
+                child: TaskTile(
+                  task: oldOccurrence.task,
+                  onNavigateToTaskDetails: onNavigateToTaskDetails,
                 ),
               );
             },

@@ -1,9 +1,13 @@
-import 'package:planme/data/models/task.dart';
+import 'package:planme/data/models/task_occurrence.dart';
 
 class TaskSection {
   final String label;
   final DateTime? date;
-  final List<Task> tasks;
+  final List<TaskOccurrence> items;
 
-  const TaskSection({required this.label, this.date, required this.tasks});
+  const TaskSection({
+    required this.label,
+    required this.date,
+    required this.items,
+  });
 }

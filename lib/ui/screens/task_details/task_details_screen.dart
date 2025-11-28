@@ -1,7 +1,5 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:planme/data/models/aggregates/task_details.dart';
-import 'package:planme/data/models/task.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -9,12 +7,16 @@ import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
 import 'package:planme/app_router.dart';
+import 'package:planme/data/models/task.dart';
 import 'package:planme/theme/app_colors.dart';
+import 'package:planme/utils/map_weekdays.dart';
 import 'package:planme/data/models/sub_task.dart';
 import 'package:planme/providers/tasks_provider.dart';
-import 'package:planme/components/custom_app_bar.dart';
 import 'package:planme/providers/subtasks_provider.dart';
+import 'package:planme/data/models/aggregates/task_details.dart';
 import 'package:planme/ui/screens/task_details/subtask_tile.dart';
+import 'package:planme/domains/recurrence/models/recurrence_rule.dart';
+import 'package:planme/domains/recurrence/models/recurrence_type.dart';
 import 'package:planme/ui/screens/task_details/create_subtask_form.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
@@ -43,6 +45,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     super.didChangeDependencies();
 
     context.read<SubtasksProvider>().loadSubtasksByTaskId(widget.taskId);
+  }
+
+  @override
+  void dispose() {
+    _buttonFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _onStarToggle(BuildContext context) async {
@@ -124,10 +132,131 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _buttonFocusNode.dispose();
-    super.dispose();
+  Widget _recurrenceDetails(RecurrenceRule recurrence) {
+    if (recurrence.type == RecurrenceType.none) {
+      return const SizedBox.shrink();
+    }
+
+    switch (recurrence.type) {
+      case RecurrenceType.intervalDays:
+        if (recurrence.interval == 1) {
+          return Text('Daily', style: TextStyle(fontWeight: FontWeight.bold));
+        }
+
+        return RichText(
+          text: TextSpan(
+            text: 'Repeats every ',
+
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+            children: [
+              TextSpan(
+                text: '${recurrence.interval}',
+                style: const TextStyle(color: AppColors.purpleBase),
+              ),
+              const TextSpan(text: ' days'),
+            ],
+          ),
+        );
+      case RecurrenceType.weekly:
+        final weekdaysList = recurrence.weekdays!.toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Repeats every: '),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              children: mapWeekDays(weekdaysList, DayFormat.short).map((
+                weekday,
+              ) {
+                return Chip(
+                  label: Text(
+                    weekday,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: AppColors.purpleLight,
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
+          ],
+        );
+
+      case RecurrenceType.monthlyDayOfMonth:
+        return Text('Repeats monthly on the ${recurrence.dayOfMonth}th.');
+
+      case RecurrenceType.monthlyWeekdayOfMonth:
+        final weekday = mapWeekDays([
+          recurrence.weekdayOfMonth!,
+        ], DayFormat.full).first;
+
+        final weekOfMonth = switch (recurrence.weekOfMonth!) {
+          1 => '1st',
+          2 => '2nd',
+          3 => '3rd',
+          4 => '4th',
+          -1 => 'Last',
+          _ => 'Unknown',
+        };
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Repeats every: '),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              children: [
+                Chip(
+                  label: Text(
+                    weekOfMonth,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: AppColors.purpleLight,
+                  visualDensity: VisualDensity.compact,
+                ),
+                Chip(
+                  label: Text(
+                    weekday,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: AppColors.purpleLight,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ],
+        );
+
+      case RecurrenceType.yearly:
+        if (recurrence.interval == 1) {
+          return Text('Yearly', style: TextStyle(fontWeight: FontWeight.bold));
+        }
+
+        return RichText(
+          text: TextSpan(
+            text: 'Repeats every ',
+
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+            children: [
+              TextSpan(
+                text: '${recurrence.interval}',
+                style: const TextStyle(color: AppColors.purpleBase),
+              ),
+              const TextSpan(text: ' years'),
+            ],
+          ),
+        );
+      case RecurrenceType.none:
+        return const SizedBox.shrink();
+    }
   }
 
   @override
@@ -160,6 +289,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
+        backgroundColor: AppColors.lightBackground,
         title: Text('Task Details'),
         actions: [
           IconButton(
@@ -294,7 +424,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   Text(taskDetails.description!),
                 const SizedBox(height: 20),
 
-                if (taskDetails.date != null || taskDetails.time != null)
+                if (taskDetails.baseDateTime != null ||
+                    taskDetails.timeLabel != null)
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
@@ -337,14 +468,16 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           ),
                           child: Row(
                             children: [
-                              if (taskDetails.date != null)
+                              if (taskDetails.baseDateTime != null)
                                 Text(
-                                  '${DateFormat.yMMMEd().format(taskDetails.date!)} ',
+                                  DateFormat.yMMMEd().format(
+                                    taskDetails.baseDateTime!,
+                                  ),
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                              if (taskDetails.time != null)
+                              if (taskDetails.timeLabel != null)
                                 Text(
-                                  '- ${taskDetails.date!.hour.toString().padLeft(2, '0')}:${taskDetails.date!.minute.toString().padLeft(2, '0')}',
+                                  ' at ${taskDetails.timeLabel!}',
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                             ],
@@ -353,6 +486,55 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ],
                     ),
                   ),
+
+                if (taskDetails.recurrence != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.purpleLight),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: 10,
+                            left: 10,
+                            right: 10,
+                            bottom: 0,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                PhosphorIcons.repeat(),
+                                color: AppColors.purpleBase,
+                              ),
+                              const SizedBox(width: 10),
+                              const Text(
+                                'Recurrence',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.gray500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(color: AppColors.purpleLight),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: 5,
+                            left: 10,
+                            right: 10,
+                            bottom: 10,
+                          ),
+                          child: _recurrenceDetails(taskDetails.recurrence!),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 

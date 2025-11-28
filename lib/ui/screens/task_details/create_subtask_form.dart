@@ -44,7 +44,6 @@ class _CreateSubtaskFormState extends State<CreateSubtaskForm> {
                     return null;
                   },
                   onFieldSubmitted: (_) {
-                    // mesmo comportamento do botão "Save"
                     if (formKey.currentState!.validate()) {
                       Navigator.of(dialogContext).pop(controller.text.trim());
                     }

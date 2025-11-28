@@ -1,35 +1,33 @@
-import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import 'package:planme/components/custom_dropdown_button.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
-import 'package:planme/theme/app_colors.dart';
 import 'package:planme/data/models/task.dart';
+import 'package:planme/theme/app_colors.dart';
 import 'package:planme/components/custom_button.dart';
 import 'package:planme/providers/tasks_provider.dart';
-import 'package:planme/components/custom_app_bar.dart';
 import 'package:planme/components/custom_text_field.dart';
+import 'package:planme/@mixins/form_validations_mixin.dart';
+import 'package:planme/components/custom_dropdown_button.dart';
 import 'package:planme/domains/recurrence/models/recurrence_end.dart';
 import 'package:planme/domains/recurrence/models/recurrence_rule.dart';
 import 'package:planme/domains/recurrence/models/recurrence_type.dart';
 
-class EditTaskScreen extends StatefulWidget {
-  final String taskId;
-  final Task task;
-
-  const EditTaskScreen({super.key, required this.taskId, required this.task});
+class CreateTaskBottomSheet extends StatefulWidget {
+  const CreateTaskBottomSheet({super.key});
 
   @override
-  State<EditTaskScreen> createState() => _EditTaskScreenState();
+  State<CreateTaskBottomSheet> createState() => _CreateTaskBottomSheetState();
 }
 
-class _EditTaskScreenState extends State<EditTaskScreen> {
+class _CreateTaskBottomSheetState extends State<CreateTaskBottomSheet>
+    with FormValidationsMixin {
   final _formKey = GlobalKey<FormState>();
 
-  late TextEditingController _titleController;
-  late TextEditingController _descriptionController;
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
@@ -37,11 +35,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   RecurrenceType _recurrenceType = RecurrenceType.none;
 
   // Campos específicos de recorrência
-  int _intervalDays = 1;
-  Set<int> _weeklyWeekdays = {};
-  int _monthlyDayOfMonth = 1;
-  int _monthlyWeekOfMonth = 1; // 1..4, -1 = last
-  int _monthlyWeekdayOfMonth = DateTime.monday;
+  int _intervalDays = 1; // intervalDays / yearly
+  Set<int> _weeklyWeekdays = {}; // weekly
+  int _monthlyDayOfMonth = 1; // monthlyDayOfMonth
+  int _monthlyWeekOfMonth = 1; // monthlyWeekdayOfMonth (1..4 ou -1 = last)
+  int _monthlyWeekdayOfMonth = DateTime.monday; // 1..7
   int _yearlyIntervalYears = 1;
 
   RecurrenceEndType _recurrenceEndType = RecurrenceEndType.never;
@@ -49,71 +47,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   int _recurrenceEndCount = 10;
 
   bool _isSubmitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController(text: widget.task.title);
-    _descriptionController = TextEditingController(
-      text: widget.task.description ?? '',
-    );
-
-    _initFromTask(widget.task);
-  }
-
-  void _initFromTask(Task task) {
-    // baseDateTime -> date/time
-    if (task.baseDateTime != null) {
-      final dt = task.baseDateTime!;
-
-      _selectedDate = DateTime(dt.year, dt.month, dt.day);
-      _selectedTime = TimeOfDay(hour: dt.hour, minute: dt.minute);
-    }
-
-    // recurrence
-    if (task.recurrence != null) {
-      final rule = task.recurrence!;
-      _recurrenceType = rule.type;
-
-      switch (rule.type) {
-        case RecurrenceType.intervalDays:
-          _intervalDays = rule.interval ?? 1;
-          break;
-
-        case RecurrenceType.weekly:
-          _weeklyWeekdays = {...(rule.weekdays ?? {})};
-          break;
-
-        case RecurrenceType.monthlyDayOfMonth:
-          _monthlyDayOfMonth = rule.dayOfMonth ?? 1;
-          break;
-
-        case RecurrenceType.monthlyWeekdayOfMonth:
-          _monthlyWeekOfMonth = rule.weekOfMonth ?? 1;
-          _monthlyWeekdayOfMonth = rule.weekdayOfMonth ?? DateTime.monday;
-          break;
-
-        case RecurrenceType.yearly:
-          _yearlyIntervalYears = rule.interval ?? 1;
-          break;
-
-        case RecurrenceType.none:
-          break;
-      }
-
-      // RecurrenceEnd
-      final end = rule.end;
-
-      if (end != null) {
-        _recurrenceEndType = end.type;
-        _recurrenceEndDate = end.untilDate;
-        _recurrenceEndCount = end.maxOccurrences ?? 10;
-      }
-    } else {
-      _recurrenceType = RecurrenceType.none;
-      _recurrenceEndType = RecurrenceEndType.never;
-    }
-  }
 
   @override
   void dispose() {
@@ -129,6 +62,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
+
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? now,
@@ -181,7 +115,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         );
 
       case RecurrenceType.weekly:
-        if (_weeklyWeekdays.isEmpty) return null;
+        if (_weeklyWeekdays.isEmpty) {
+          // se não marcar nenhum dia, não faz sentido
+          return null;
+        }
+
         return RecurrenceRule(
           type: RecurrenceType.weekly,
           start: baseDateTime,
@@ -223,16 +161,19 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     if (_isSubmitting) return;
 
     final isValid = _formKey.currentState?.validate() ?? false;
+
     if (!isValid) return;
 
+    // se for recorrente, precisa pelo menos de data+hora
     final baseDateTime = _combineDateAndTime(_selectedDate, _selectedTime);
 
     if (_recurrenceType != RecurrenceType.none && baseDateTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('To save a recurring task, select date and time.'),
+          content: Text('To create a recurring task, select date and time.'),
         ),
       );
+
       return;
     }
 
@@ -241,38 +182,44 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     try {
       final tasksProvider = context.read<TasksProvider>();
 
+      final now = DateTime.now();
+
       final recurrence = baseDateTime != null
           ? _buildRecurrenceRule(baseDateTime)
           : null;
 
-      final updatedTask = widget.task.copyWith(
+      final task = Task(
+        id: Uuid().v4(),
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
         baseDateTime: baseDateTime,
+        isStarred: false,
+        createdAt: now,
         recurrence: recurrence,
-        updatedAt: DateTime.now(),
       );
 
-      await tasksProvider.editTask(updatedTask);
+      await tasksProvider.createTask(task);
 
       if (!mounted) return;
 
-      context.pop(true);
+      Navigator.of(context).pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text('Task updated successfully'),
+          content: Text('Task created successfully'),
         ),
       );
     } catch (e) {
-      debugPrint('Edit task error: $e');
+      debugPrint('Create task error: $e');
+
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error updating task: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error creating task: $e')));
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -280,7 +227,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     }
   }
 
-  // ==== UI helpers de recorrência ====
   Widget _buildRecurrenceTypeSelector() {
     return CustomDropdownButton<RecurrenceType>(
       value: _recurrenceType,
@@ -428,12 +374,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Widget _buildWeeklyChips() {
+    // DateTime.monday = 1 ... sunday = 7
     const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     return Wrap(
       spacing: 8,
       children: List.generate(7, (index) {
-        final weekday = index + 1; // 1..7
+        final weekday = index + 1;
         final isSelected = _weeklyWeekdays.contains(weekday);
 
         return ChoiceChip(
@@ -488,16 +435,16 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                         }
                       }
 
-                      return null;
+                      return null; // Válido
                     },
                     onChanged: (value) {
                       final parsed = int.tryParse(value);
 
                       if (parsed != null) {
                         if (parsed == 0) {
-                          setState(() => _intervalDays = 1);
+                          _intervalDays = 1;
                         } else {
-                          setState(() => _intervalDays = parsed);
+                          _intervalDays = parsed;
                         }
                       }
                     },
@@ -521,33 +468,30 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         );
 
       case RecurrenceType.monthlyDayOfMonth:
-        return Padding(
-          padding: const EdgeInsets.only(top: 4, left: 4, right: 0, bottom: 0),
-          child: Row(
-            children: [
-              const Text('Repeat monthly on day'),
-              const SizedBox(width: 8),
-              DropdownButton<int>(
-                isDense: true,
-                dropdownColor: AppColors.lightBackground,
-                menuMaxHeight: 350,
-                value: _monthlyDayOfMonth,
-                items: List.generate(31, (index) {
-                  return DropdownMenuItem(
-                    value: index + 1,
-                    child: Text('${index + 1}'),
-                  );
-                }),
-                onChanged: (value) {
-                  if (value == null) return;
+        return Row(
+          children: [
+            const Text('Repeat monthly on day'),
+            const SizedBox(width: 8),
+            DropdownButton<int>(
+              isDense: true,
+              dropdownColor: AppColors.lightBackground,
+              menuMaxHeight: 350,
+              value: _monthlyDayOfMonth,
+              items: List.generate(31, (index) {
+                return DropdownMenuItem(
+                  value: index + 1,
+                  child: Text('${index + 1}'),
+                );
+              }),
+              onChanged: (value) {
+                if (value == null) return;
 
-                  if (value >= 1 && value <= 31) {
-                    setState(() => _monthlyDayOfMonth = value);
-                  }
-                },
-              ),
-            ],
-          ),
+                if (value >= 1 && value <= 31) {
+                  setState(() => _monthlyDayOfMonth = value);
+                }
+              },
+            ),
+          ],
         );
 
       case RecurrenceType.monthlyWeekdayOfMonth:
@@ -652,11 +596,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                     },
                     onChanged: (value) {
                       final parsed = int.tryParse(value);
-
                       if (parsed != null && parsed > 0) {
-                        setState(() {
-                          _yearlyIntervalYears = parsed;
-                        });
+                        _yearlyIntervalYears = parsed;
                       }
                     },
                   ),
@@ -675,6 +616,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+
     final dateText = _selectedDate != null
         ? DateFormat.yMMMd().format(_selectedDate!)
         : 'Select date';
@@ -683,115 +626,151 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         ? _selectedTime!.format(context)
         : 'Select time';
 
-    return Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.lightBackground,
-        title: const Text('Edit task'),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 200),
+      padding: EdgeInsets.only(bottom: bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle e título
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        CustomTextField(
-                          controller: _titleController,
-                          hintText: 'Task title',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Title is required';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        CustomTextField(
-                          controller: _descriptionController,
-                          hintText: 'Add details (optional)...',
-                          minLines: 1,
-                          maxLines: 4,
-                        ),
-                        const SizedBox(height: 16),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                icon: const Icon(
-                                  Icons.calendar_today,
-                                  size: 18,
-                                  color: AppColors.purpleBase,
-                                ),
-                                label: Text(
-                                  dateText,
-                                  style: TextStyle(color: AppColors.purpleBase),
-                                ),
-                                onPressed: _pickDate,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                icon: const Icon(
-                                  Icons.schedule,
-                                  size: 18,
-                                  color: AppColors.purpleBase,
-                                ),
-                                label: Text(
-                                  timeText,
-                                  style: TextStyle(color: AppColors.purpleBase),
-                                ),
-                                onPressed: _pickTime,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        const SizedBox(height: 8),
                         const Text(
-                          'Repeat',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                          'New task',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-
-                        // Recurrence
-                        _buildRecurrenceTypeSelector(),
-                        const SizedBox(height: 8),
-                        _buildRecurrenceDetails(),
-                        if (_recurrenceType != RecurrenceType.none) ...[
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          _buildRecurrenceEndSection(),
-                        ],
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 12),
+
+                    // Title
+                    CustomTextField(
+                      controller: _titleController,
+                      hintText: 'Task title',
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Title is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Description
+                    CustomTextField(
+                      controller: _descriptionController,
+                      hintText: 'Add details (optional)...',
+                      minLines: 1,
+                      maxLines: 4,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Date / time row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(
+                              Icons.calendar_today,
+                              size: 18,
+                              color: AppColors.purpleBase,
+                            ),
+                            label: Text(
+                              dateText,
+                              style: TextStyle(color: AppColors.purpleBase),
+                            ),
+                            onPressed: _pickDate,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(
+                              Icons.schedule,
+                              size: 18,
+                              color: AppColors.purpleBase,
+                            ),
+                            label: Text(
+                              timeText,
+                              style: TextStyle(color: AppColors.purpleBase),
+                            ),
+                            onPressed: _pickTime,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Repeat',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Recurrence
+                    _buildRecurrenceTypeSelector(),
+                    const SizedBox(height: 8),
+                    _buildRecurrenceDetails(),
+                    if (_recurrenceType != RecurrenceType.none) ...[
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      _buildRecurrenceEndSection(),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomButton(
+                            label: _isSubmitting ? 'Saving...' : 'Save task',
+                            onPressed: _handleSubmit,
+                            disabled: _isSubmitting,
+                            isLoading: _isSubmitting,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                      label: _isSubmitting ? 'Saving...' : 'Save changes',
-                      onPressed: _handleSubmit,
-                      isLoading: _isSubmitting,
-                      disabled: _isSubmitting,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),

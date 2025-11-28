@@ -1,10 +1,13 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/components/custom_app_bar.dart';
+import 'package:planme/ui/screens/tabs/agenda_tab.dart';
+import 'package:planme/ui/screens/tabs/all_tasks_tab.dart';
+import 'package:planme/ui/screens/home/create_task_bottom_sheet.dart';
 import 'package:planme/ui/screens/starred_tasks/starred_tasks_screen.dart';
-import 'package:planme/ui/screens/tasks/tasks_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,7 +22,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, initialIndex: 1, vsync: this);
+    _tabController = TabController(length: 3, initialIndex: 1, vsync: this);
+  }
+
+  Future<void> showCreateTaskBottomSheet(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return const CreateTaskBottomSheet();
+      },
+    );
   }
 
   @override
@@ -36,6 +51,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         title: 'Hi, Mathews',
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          // isScrollable: true,
           indicatorColor: AppColors.purpleBase,
           labelColor: AppColors.purpleBase,
           tabs: <Widget>[
@@ -43,8 +61,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(PhosphorIconsFill.star),
-                  SizedBox(width: 10),
+                  Icon(PhosphorIconsFill.star, size: 20),
+                  SizedBox(width: 8),
                   Text(
                     'Favorites',
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -56,12 +74,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(PhosphorIconsFill.sticker),
-                  SizedBox(width: 10),
+                  Icon(PhosphorIconsFill.sticker, size: 20),
+                  SizedBox(width: 8),
                   Text(
-                    'My tasks',
+                    'All Tasks',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(PhosphorIconsFill.notebook, size: 20),
+                  SizedBox(width: 8),
+                  Text('Agenda', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -71,8 +99,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: SafeArea(
         child: TabBarView(
           controller: _tabController,
-          children: <Widget>[StarredTasksScreen(), TasksScreen()],
+          children: [StarredTasksScreen(), AllTasksTab(), AgendaTab()],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showCreateTaskBottomSheet(context),
+        child: const Icon(Icons.add),
       ),
     );
   }

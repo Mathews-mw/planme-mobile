@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
-import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
-import 'package:planme/app_router.dart';
-import 'package:planme/components/no_starred_card.dart';
-import 'package:planme/components/no_tasks_card.dart';
-import 'package:planme/data/models/aggregates/task_details.dart';
-import 'package:planme/data/models/task.dart';
-import 'package:planme/providers/tasks_provider.dart';
-import 'package:planme/theme/app_colors.dart';
-import 'package:planme/ui/screens/starred_tasks/starred_task_tile.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
+import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
+
+import 'package:planme/app_router.dart';
+import 'package:planme/data/models/task.dart';
+import 'package:planme/theme/app_colors.dart';
+import 'package:planme/components/task_tile.dart';
+import 'package:planme/providers/tasks_provider.dart';
+import 'package:planme/components/no_starred_card.dart';
+import 'package:planme/data/models/aggregates/task_details.dart';
 
 class StarredTasksScreen extends StatefulWidget {
   const StarredTasksScreen({super.key});
@@ -166,7 +166,7 @@ class _StarredTasksScreenState extends State<StarredTasksScreen> {
                                         return SizeFadeTransition(
                                           animation: animation,
                                           curve: Curves.easeOut,
-                                          child: StarredTaskTile(
+                                          child: TaskTile(
                                             task: tasks,
                                             onNavigateToTaskDetails:
                                                 (String taskId) async {
@@ -182,7 +182,7 @@ class _StarredTasksScreenState extends State<StarredTasksScreen> {
                                         return SizeFadeTransition(
                                           animation: animation,
                                           curve: Curves.easeIn,
-                                          child: StarredTaskTile(
+                                          child: TaskTile(
                                             task: oldTask,
                                             onNavigateToTaskDetails:
                                                 (String taskId) async {

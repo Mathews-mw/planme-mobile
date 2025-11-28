@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:planme/data/models/task.dart';
 import 'package:planme/ui/screens/home/home_screen.dart';
-import 'package:planme/ui/screens/tasks/tasks_screen.dart';
 import 'package:planme/ui/screens/edit_task/edit_task_screen.dart';
 import 'package:planme/ui/screens/task_details/task_details_screen.dart';
 
@@ -21,7 +20,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/tasks',
-        builder: (context, state) => const TasksScreen(),
+        builder: (context, state) => const HomeScreen(),
         routes: [
           GoRoute(
             path: ':taskId',
