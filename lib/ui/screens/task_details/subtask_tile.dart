@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/data/models/sub_task.dart';
@@ -10,12 +11,16 @@ class SubtaskTile extends StatefulWidget {
   final SubTask subtask;
   final Future<void> Function(String data) onEditSubtask;
   final Future<void> Function() onDeleteSubtask;
+  final Future<void> Function() onToggleComplete;
+  final bool isDraggable;
 
   const SubtaskTile({
     super.key,
     required this.subtask,
     required this.onEditSubtask,
     required this.onDeleteSubtask,
+    required this.onToggleComplete,
+    this.isDraggable = true,
   });
 
   @override
@@ -41,7 +46,7 @@ class _SubtaskTileState extends State<SubtaskTile> {
                   controller.text = widget.subtask.title;
 
                   return AlertDialog(
-                    backgroundColor: Colors.white,
+                    backgroundColor: AppColors.lightBackground,
                     title: const Text('Edit subtask'),
                     content: Form(
                       key: formKey,
@@ -112,6 +117,7 @@ class _SubtaskTileState extends State<SubtaskTile> {
               final result = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
+                  backgroundColor: AppColors.lightBackground,
                   title: const Text('Delete Subtask'),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -150,13 +156,27 @@ class _SubtaskTileState extends State<SubtaskTile> {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         leading: IconButton(
-          onPressed: () {},
+          onPressed: widget.onToggleComplete,
           icon: widget.subtask.isCompleted
               ? Icon(Icons.check, size: 20, color: AppColors.purpleBase)
               : Icon(Icons.radio_button_unchecked, size: 20),
           tooltip: 'Mark task as uncompleted',
         ),
-        title: Text(widget.subtask.title),
+        title: Text(
+          widget.subtask.title,
+          style: widget.subtask.isCompleted
+              ? TextStyle(
+                  color: AppColors.gray500,
+                  decoration: TextDecoration.lineThrough,
+                )
+              : null,
+        ),
+        trailing: widget.isDraggable
+            ? Handle(
+                delay: const Duration(milliseconds: 0),
+                child: Icon(PhosphorIcons.dotsSixVertical()),
+              )
+            : null,
       ),
     );
   }

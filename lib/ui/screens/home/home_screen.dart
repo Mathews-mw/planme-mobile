@@ -1,13 +1,17 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import 'package:planme/app_router.dart';
 import 'package:planme/theme/app_colors.dart';
+import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/components/custom_app_bar.dart';
-import 'package:planme/ui/screens/tabs/agenda_tab.dart';
-import 'package:planme/ui/screens/tabs/all_tasks_tab.dart';
+import 'package:planme/ui/screens/tasks_tabs/agenda_tab.dart';
+import 'package:planme/data/models/aggregates/task_details.dart';
+import 'package:planme/ui/screens/tasks_tabs/all_tasks_tab.dart';
+import 'package:planme/ui/screens/tasks_tabs/starred_tasks_tab.dart';
 import 'package:planme/ui/screens/home/create_task_bottom_sheet.dart';
-import 'package:planme/ui/screens/starred_tasks/starred_tasks_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,12 +21,28 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  bool _isLoading = true;
   late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<TasksProvider>().loadAllTasks();
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    });
+
     _tabController = TabController(length: 3, initialIndex: 1, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> showCreateTaskBottomSheet(BuildContext context) async {
@@ -37,23 +57,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _navigateToTaskDetails(String taskId) async {
+    final result = await context.pushNamed<(bool, TaskDetails?)>(
+      AppRouter.taskDetails,
+      pathParameters: {'taskId': taskId},
+    );
+
+    if (!mounted) return;
+
+    if (result != null && result.$1) {
+      final deletedTask = result.$2;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Task deleted',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.lightBackground,
+          action: SnackBarAction(
+            label: 'UNDO',
+            textColor: AppColors.purpleBase,
+            onPressed: () async {
+              if (deletedTask != null) {
+                await context.read<TasksProvider>().restoreTask(deletedTask);
+              }
+            },
+          ),
+        ),
+      );
+    }
+
+    // se você quiser recarregar depois de voltar (por caso de edição),
+    // pode chamar _loadTasksForCurrentRange() de novo aqui.
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: CustomAppBar(
         title: 'Hi, Mathews',
         bottom: TabBar(
           controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
           // isScrollable: true,
+          tabAlignment: TabAlignment.fill,
+          dividerHeight: 1,
           indicatorColor: AppColors.purpleBase,
           labelColor: AppColors.purpleBase,
           tabs: <Widget>[
@@ -99,7 +153,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: SafeArea(
         child: TabBarView(
           controller: _tabController,
-          children: [StarredTasksScreen(), AllTasksTab(), AgendaTab()],
+          children: [
+            StarredTasksTab(navigateToTaskDetails: _navigateToTaskDetails),
+            AllTasksTab(navigateToTaskDetails: _navigateToTaskDetails),
+            AgendaTab(navigateToTaskDetails: _navigateToTaskDetails),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(

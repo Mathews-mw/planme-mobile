@@ -5,7 +5,7 @@ class RecurrenceRule {
   /// Tipo da recorrência.
   final RecurrenceType type;
 
-  /// Data/hora a partir da qual a recorrência passa a valer.
+  /// Data/hora a partir da qual a recorrência passa a valer (baseDateTime).
   final DateTime start;
 
   /// Regras de término (nunca, até data X, depois de N vezes).

@@ -1,3 +1,6 @@
+import 'dart:ui';
+
+import 'package:expandable/expandable.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -99,16 +102,62 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     }
   }
 
-  Future<void> _deleteSubtask({required String subtaskId}) async {
+  Future<void> _deleteSubtask(SubTask subtask) async {
     try {
       final subtaskProvider = Provider.of<SubtasksProvider>(
         context,
         listen: false,
       );
 
-      await subtaskProvider.deleteSubtask(subtaskId);
+      final deletedSubtaskIndex = await subtaskProvider.deleteSubtask(
+        subtask.id,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Subtask deleted',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.lightBackground,
+          action: SnackBarAction(
+            label: 'UNDO',
+            textColor: AppColors.purpleBase,
+            onPressed: () async {
+              await subtaskProvider.restoreSubtask(
+                subtaskIndex: deletedSubtaskIndex,
+                subtask: subtask,
+              );
+            },
+          ),
+        ),
+      );
     } catch (e) {
-      print('edit subtask error: $e');
+      print('delete subtask error: $e');
+    }
+  }
+
+  Future<void> _toggleCompleteSubtask(
+    BuildContext context,
+    SubTask subtask,
+  ) async {
+    try {
+      final subtaskProvider = Provider.of<SubtasksProvider>(
+        context,
+        listen: false,
+      );
+
+      await subtaskProvider.toggleCompleted(
+        subtaskId: subtask.id,
+        isCompleted: !subtask.isCompleted,
+      );
+
+      // await subtaskProvider.loadSubtasksByTaskId(subtask.taskId);
+    } catch (e) {
+      print('toggle complete subtask error: $e');
     }
   }
 
@@ -336,6 +385,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   final result = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.lightBackground,
                       title: const Text('Delete Task'),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -546,7 +596,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     },
                   ),
                   builder: (context, subtasksProvider, child) {
-                    final subtasks = subtasksProvider.subtasks;
+                    final subtasks = subtasksProvider.activeSubtasks;
+                    final completedSubtasks =
+                        subtasksProvider.completedSubtasks;
 
                     return Container(
                       decoration: BoxDecoration(
@@ -594,53 +646,135 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             ),
 
                           // Subtasks list
-                          ImplicitlyAnimatedList<SubTask>(
+                          ImplicitlyAnimatedReorderableList<SubTask>(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             items: subtasks,
                             areItemsTheSame: (a, b) => a.id == b.id,
-                            itemBuilder: (context, animation, subtask, index) {
-                              return SizeFadeTransition(
-                                animation: animation,
-                                curve: Curves.easeOut,
-                                child: SubtaskTile(
-                                  subtask: subtask,
-                                  onEditSubtask: (String title) async {
-                                    await _editSubtask(
-                                      subtaskId: subtask.id,
-                                      title: title,
-                                    );
-                                  },
-                                  onDeleteSubtask: () async {
-                                    await _deleteSubtask(subtaskId: subtask.id);
-                                  },
-                                ),
+                            onReorderFinished: (item, from, to, newItems) {
+                              context.read<SubtasksProvider>().setSubtasksOrder(
+                                newItems,
                               );
                             },
-                            removeItemBuilder:
-                                (context, animation, oldSubtask) {
-                                  return SizeFadeTransition(
-                                    animation: animation,
-                                    curve: Curves.easeIn,
-                                    child: SubtaskTile(
-                                      subtask: oldSubtask,
-                                      onEditSubtask: (String title) async {
-                                        await _editSubtask(
-                                          subtaskId: oldSubtask.id,
-                                          title: title,
-                                        );
-                                      },
-                                      onDeleteSubtask: () async {
-                                        await _deleteSubtask(
-                                          subtaskId: oldSubtask.id,
-                                        );
-                                      },
-                                    ),
+                            itemBuilder:
+                                (context, itemAnimation, subtask, index) {
+                                  return Reorderable(
+                                    key: ValueKey(subtask.id),
+                                    builder: (context, dragAnimation, inDrag) {
+                                      final t = dragAnimation.value;
+                                      final elevation = lerpDouble(0, 8, t);
+                                      final color = Color.lerp(
+                                        Colors.white,
+                                        Colors.white.withValues(alpha: 0.8),
+                                        t,
+                                      );
+
+                                      return AnimatedBuilder(
+                                        animation: dragAnimation,
+                                        builder: (context, _) {
+                                          return SizeFadeTransition(
+                                            sizeFraction: 0.7,
+                                            curve: Curves.easeOut,
+                                            animation: itemAnimation,
+                                            child: Material(
+                                              color: color,
+                                              elevation: elevation!,
+                                              type: MaterialType.transparency,
+                                              child: SubtaskTile(
+                                                subtask: subtask,
+                                                onToggleComplete: () async {
+                                                  await _toggleCompleteSubtask(
+                                                    context,
+                                                    subtask,
+                                                  );
+                                                },
+                                                onEditSubtask:
+                                                    (String title) async {
+                                                      await _editSubtask(
+                                                        subtaskId: subtask.id,
+                                                        title: title,
+                                                      );
+                                                    },
+                                                onDeleteSubtask: () async {
+                                                  await _deleteSubtask(subtask);
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
                                   );
                                 },
                             removeDuration: const Duration(milliseconds: 300),
                             insertDuration: const Duration(milliseconds: 300),
                             updateDuration: const Duration(milliseconds: 300),
+                          ),
+
+                          const Divider(color: AppColors.purpleLight),
+
+                          // Completed Subtasks section
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 16,
+                            ),
+                            child: ExpandablePanel(
+                              theme: ExpandableThemeData(
+                                headerAlignment:
+                                    ExpandablePanelHeaderAlignment.center,
+                                tapBodyToExpand: true,
+                                tapBodyToCollapse: true,
+                                hasIcon: true,
+                              ),
+                              header: Text(
+                                'Completed Subtasks (${completedSubtasks.length})',
+                              ),
+                              collapsed: const SizedBox.shrink(),
+
+                              // Completed tasks list
+                              expanded: ImplicitlyAnimatedList<SubTask>(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                items: completedSubtasks,
+                                areItemsTheSame: (a, b) => a.id == b.id,
+                                itemBuilder:
+                                    (context, animation, subtask, index) {
+                                      return SizeFadeTransition(
+                                        animation: animation,
+                                        curve: Curves.easeOut,
+                                        child: SubtaskTile(
+                                          subtask: subtask,
+                                          isDraggable: false,
+                                          onToggleComplete: () async {
+                                            await _toggleCompleteSubtask(
+                                              context,
+                                              subtask,
+                                            );
+                                          },
+                                          onEditSubtask: (String title) async {
+                                            await _editSubtask(
+                                              subtaskId: subtask.id,
+                                              title: title,
+                                            );
+                                          },
+                                          onDeleteSubtask: () async {
+                                            await _deleteSubtask(subtask);
+                                          },
+                                        ),
+                                      );
+                                    },
+                                removeDuration: const Duration(
+                                  milliseconds: 300,
+                                ),
+                                insertDuration: const Duration(
+                                  milliseconds: 300,
+                                ),
+                                updateDuration: const Duration(
+                                  milliseconds: 300,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),

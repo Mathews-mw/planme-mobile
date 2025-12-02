@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:planme/domains/recurrence/recurrence_engine.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -48,10 +49,10 @@ class TaskTile extends StatelessWidget {
         ? '${scheduledAt!.hour.toString().padLeft(2, '0')}:${scheduledAt!.minute.toString().padLeft(2, '0')}'
         : null;
 
-    final next = context.read<TasksProvider>().getNextOccurrenceForTask(
-      task,
-      from: scheduledAt,
-    );
+    // final next = RecurrenceEngine().getNextOccurrenceForTask(
+    //   task,
+    //   from: scheduledAt,
+    // );
 
     return Material(
       color: Colors.transparent,

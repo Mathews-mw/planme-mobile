@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
 
-import 'package:planme/components/task_tile.dart';
 import 'package:planme/data/models/task_section.dart';
 import 'package:planme/data/models/task_occurrence.dart';
+import 'package:planme/components/task_components/task_tile.dart';
 
 class TaskSectionWidget extends StatelessWidget {
   final TaskSection section;
@@ -28,7 +28,7 @@ class TaskSectionWidget extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: isLast
             ? BorderRadius.vertical(bottom: Radius.circular(12))
-            : BorderRadius.circular(6),
+            : BorderRadius.circular(2),
         color: Colors.white,
         boxShadow: [
           BoxShadow(

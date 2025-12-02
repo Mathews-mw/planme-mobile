@@ -7,35 +7,50 @@ import 'package:planme/app_router.dart';
 import 'package:planme/theme/theme.dart';
 import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/providers/subtasks_provider.dart';
+import 'package:planme/data/repositories/tasks_repository.dart';
+import 'package:planme/data/database/isar/local_database_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await initializeDateFormatting('en-US', null);
 
-  runApp(const MyApp());
+  await LocalDatabaseService().initialize();
+
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  late final TasksRepository tasksRepository;
+
+  MyApp({super.key}) {
+    tasksRepository = TasksRepository();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SubtasksProvider()),
-        // TasksProvider needs the SubtasksProvider
         ChangeNotifierProxyProvider<SubtasksProvider, TasksProvider>(
           create: (context) {
             final subtasks = Provider.of<SubtasksProvider>(
               context,
               listen: false,
             );
-            return TasksProvider(subtasksProvider: subtasks);
+
+            return TasksProvider(
+              subtasksProvider: subtasks,
+              tasksRepository: tasksRepository,
+            );
           },
           update: (context, subtasks, previous) {
             // se quiser atualizar a referência depois:
-            return previous ?? TasksProvider(subtasksProvider: subtasks);
+            return previous ??
+                TasksProvider(
+                  subtasksProvider: subtasks,
+                  tasksRepository: tasksRepository,
+                );
           },
         ),
       ],
