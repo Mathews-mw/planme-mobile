@@ -18,7 +18,10 @@ class AllTasksTab extends StatelessWidget {
     return SingleChildScrollView(
       child: Consumer<TasksProvider>(
         builder: (context, tasksProvider, child) {
-          final sections = tasksProvider.buildAllTaskSections(now);
+          final sections = tasksProvider.buildAllTaskSections(
+            now: now,
+            onlyActives: true,
+          );
           final completedTasks = tasksProvider.completedTasks;
 
           if (sections.isEmpty && completedTasks.isEmpty) {

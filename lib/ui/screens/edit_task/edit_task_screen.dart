@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:planme/components/custom_dropdown_button.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,8 +8,8 @@ import 'package:planme/theme/app_colors.dart';
 import 'package:planme/data/models/task.dart';
 import 'package:planme/components/custom_button.dart';
 import 'package:planme/providers/tasks_provider.dart';
-import 'package:planme/components/custom_app_bar.dart';
 import 'package:planme/components/custom_text_field.dart';
+import 'package:planme/components/custom_dropdown_button.dart';
 import 'package:planme/domains/recurrence/models/recurrence_end.dart';
 import 'package:planme/domains/recurrence/models/recurrence_rule.dart';
 import 'package:planme/domains/recurrence/models/recurrence_type.dart';
@@ -104,11 +103,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       // RecurrenceEnd
       final end = rule.end;
 
-      if (end != null) {
-        _recurrenceEndType = end.type;
-        _recurrenceEndDate = end.untilDate;
-        _recurrenceEndCount = end.maxOccurrences ?? 10;
-      }
+      _recurrenceEndType = end.type;
+      _recurrenceEndDate = end.untilDate;
+      _recurrenceEndCount = end.maxOccurrences ?? 10;
     } else {
       _recurrenceType = RecurrenceType.none;
       _recurrenceEndType = RecurrenceEndType.never;

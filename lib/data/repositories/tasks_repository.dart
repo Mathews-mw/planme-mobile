@@ -47,11 +47,11 @@ class TasksRepository {
     return data;
   }
 
-  Future<void> updateTask(TaskIsar task) async {
-    task.updatedAt = DateTime.now();
+  Future<void> updateTask(Task task) async {
+    final data = TaskMapper.toIsar(task);
 
     await _database.writeTxn(() async {
-      await _database.taskIsars.put(task);
+      await _database.taskIsars.put(data);
     });
   }
 

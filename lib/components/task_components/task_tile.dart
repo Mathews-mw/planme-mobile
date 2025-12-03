@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:planme/domains/recurrence/recurrence_engine.dart';
 import 'package:provider/provider.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -21,12 +20,12 @@ class TaskTile extends StatelessWidget {
 
   Future<void> _onStarredToggle(BuildContext context) async {
     try {
-      await context.read<TasksProvider>().setStarredStatus(
+      await context.read<TasksProvider>().toggleStarred(
         taskId: task.id,
         isStarred: !task.isStarred,
       );
     } catch (e) {
-      print('Error toggle star: $e');
+      print('Error toggle starred: $e');
     }
   }
 
@@ -48,11 +47,6 @@ class TaskTile extends StatelessWidget {
     final timeText = scheduledAt != null
         ? '${scheduledAt!.hour.toString().padLeft(2, '0')}:${scheduledAt!.minute.toString().padLeft(2, '0')}'
         : null;
-
-    // final next = RecurrenceEngine().getNextOccurrenceForTask(
-    //   task,
-    //   from: scheduledAt,
-    // );
 
     return Material(
       color: Colors.transparent,

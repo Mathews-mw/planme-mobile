@@ -1,10 +1,10 @@
 import 'dart:ui';
 
-import 'package:expandable/expandable.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:expandable/expandable.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:implicitly_animated_reorderable_list_2/transitions.dart';
 import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reorderable_list_2.dart';
@@ -35,22 +35,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final FocusNode _buttonFocusNode = FocusNode(debugLabel: 'Menu Button');
 
   @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TasksProvider>().loadTaskDetails(widget.taskId);
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    context.read<SubtasksProvider>().loadSubtasksByTaskId(widget.taskId);
-  }
-
-  @override
   void dispose() {
     _buttonFocusNode.dispose();
     super.dispose();
@@ -58,19 +42,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   Future<void> _onStarToggle(BuildContext context) async {
     try {
-      final state = context.read<TasksProvider>().detailsState;
-      final taskDetails = state.task;
+      final taskDetails = context.read<TasksProvider>().getTaskDetails(
+        widget.taskId,
+      );
 
-      if (taskDetails == null) {
-        return;
-      }
-
-      await context.read<TasksProvider>().setStarredStatus(
+      await context.read<TasksProvider>().toggleStarred(
         taskId: taskDetails.id,
         isStarred: !taskDetails.isStarred,
       );
-
-      await context.read<TasksProvider>().loadTaskDetails(widget.taskId);
     } catch (e) {
       print('Error toggle star: $e');
     }
@@ -310,458 +289,392 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<TasksProvider>().detailsState;
+    return Consumer<TasksProvider>(
+      builder: (context, tasksProvider, _) {
+        final taskDetails = tasksProvider.getTaskDetails(widget.taskId);
 
-    if (state.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 10),
-            Text('Loading task details...'),
-          ],
-        ),
-      );
-    }
-
-    if (state.error != null) {
-      return const Center(child: Text('Error loading task'));
-    }
-
-    final taskDetails = state.task;
-
-    if (taskDetails == null) {
-      return const Center(child: Text('Task not found'));
-    }
-
-    return Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.lightBackground,
-        title: Text('Task Details'),
-        actions: [
-          IconButton(
-            onPressed: () => _onStarToggle(context),
-            icon: Icon(
-              taskDetails.isStarred
-                  ? PhosphorIconsFill.star
-                  : PhosphorIcons.star(),
-              size: 20,
-              color: taskDetails.isStarred ? Colors.amber : null,
-            ),
-            tooltip: 'Mark task as favorite',
-          ),
-          MenuAnchor(
-            style: MenuStyle(
-              backgroundColor: WidgetStatePropertyAll(
-                AppColors.lightBackground,
-              ),
-              elevation: const WidgetStatePropertyAll(8),
-            ),
-            childFocusNode: _buttonFocusNode,
-            menuChildren: <Widget>[
-              MenuItemButton(
-                leadingIcon: Icon(PhosphorIcons.pencilSimpleLine()),
-                onPressed: () {
-                  context.pushNamed(
-                    AppRouter.editTask,
-                    pathParameters: {'taskId': widget.taskId},
-                    extra: taskDetails,
-                  );
-                },
-                child: const Text('Edit'),
-              ),
-              MenuItemButton(
-                leadingIcon: Icon(PhosphorIcons.trash()),
-                style: ButtonStyle(
-                  foregroundColor: const WidgetStatePropertyAll(Colors.red),
-                  iconColor: const WidgetStatePropertyAll(Colors.red),
-                  overlayColor: WidgetStatePropertyAll(
-                    Colors.red.withValues(alpha: 0.06),
-                  ),
+        return Scaffold(
+          backgroundColor: AppColors.lightBackground,
+          appBar: AppBar(
+            backgroundColor: AppColors.lightBackground,
+            title: Text('Task Details'),
+            actions: [
+              IconButton(
+                onPressed: () => _onStarToggle(context),
+                icon: Icon(
+                  taskDetails.isStarred
+                      ? PhosphorIconsFill.star
+                      : PhosphorIcons.star(),
+                  size: 20,
+                  color: taskDetails.isStarred ? Colors.amber : null,
                 ),
-                onPressed: () async {
-                  final result = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: AppColors.lightBackground,
-                      title: const Text('Delete Task'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Are you sure you want to delete this task? Deleting this task will also delete all subtasks associated with it.',
-                          ),
-                        ],
+                tooltip: 'Mark task as favorite',
+              ),
+              MenuAnchor(
+                style: MenuStyle(
+                  backgroundColor: WidgetStatePropertyAll(
+                    AppColors.lightBackground,
+                  ),
+                  elevation: const WidgetStatePropertyAll(8),
+                ),
+                childFocusNode: _buttonFocusNode,
+                menuChildren: <Widget>[
+                  MenuItemButton(
+                    leadingIcon: Icon(PhosphorIcons.pencilSimpleLine()),
+                    onPressed: () {
+                      context.pushNamed(
+                        AppRouter.editTask,
+                        pathParameters: {'taskId': widget.taskId},
+                        extra: taskDetails,
+                      );
+                    },
+                    child: const Text('Edit'),
+                  ),
+                  MenuItemButton(
+                    leadingIcon: Icon(PhosphorIcons.trash()),
+                    style: ButtonStyle(
+                      foregroundColor: const WidgetStatePropertyAll(Colors.red),
+                      iconColor: const WidgetStatePropertyAll(Colors.red),
+                      overlayColor: WidgetStatePropertyAll(
+                        Colors.red.withValues(alpha: 0.06),
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(
-                            'Close',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: () async {
+                      final result = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: AppColors.lightBackground,
+                          title: const Text('Delete Task'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Are you sure you want to delete this task? Deleting this task will also delete all subtasks associated with it.',
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text(
+                                'Close',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text(
-                            'Delete',
-                            style: TextStyle(color: AppColors.dangerBase),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (result != null && result) {
-                    if (!context.mounted) return;
-
-                    await _deleteTask(context: context, task: taskDetails);
-                  }
-                },
-                child: const Text('Delete'),
-              ),
-            ],
-            builder: (_, MenuController controller, Widget? child) {
-              return IconButton(
-                focusNode: _buttonFocusNode,
-                onPressed: () {
-                  if (controller.isOpen) {
-                    controller.close();
-                  } else {
-                    controller.open();
-                  }
-                },
-                icon: const Icon(Icons.more_vert),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      PhosphorIcons.note(),
-                      color: AppColors.purpleBase,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        taskDetails.title,
-                        softWrap: true,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (taskDetails.description != null)
-                  Text(taskDetails.description!),
-                const SizedBox(height: 20),
-
-                if (taskDetails.baseDateTime != null ||
-                    taskDetails.timeLabel != null)
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.purpleLight),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 10,
-                            left: 10,
-                            right: 10,
-                            bottom: 0,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                PhosphorIcons.calendarCheck(),
-                                color: AppColors.purpleBase,
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(color: AppColors.dangerBase),
                               ),
-                              const SizedBox(width: 10),
-                              const Text(
-                                'Date and Time',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.gray500,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const Divider(color: AppColors.purpleLight),
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 5,
-                            left: 10,
-                            right: 10,
-                            bottom: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              if (taskDetails.baseDateTime != null)
-                                Text(
-                                  DateFormat.yMMMEd().format(
-                                    taskDetails.baseDateTime!,
-                                  ),
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              if (taskDetails.timeLabel != null)
-                                Text(
-                                  ' at ${taskDetails.timeLabel!}',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      );
 
-                if (taskDetails.recurrence != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.purpleLight),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 10,
-                            left: 10,
-                            right: 10,
-                            bottom: 0,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                PhosphorIcons.repeat(),
-                                color: AppColors.purpleBase,
-                              ),
-                              const SizedBox(width: 10),
-                              const Text(
-                                'Recurrence',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: AppColors.gray500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(color: AppColors.purpleLight),
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: 5,
-                            left: 10,
-                            right: 10,
-                            bottom: 10,
-                          ),
-                          child: _recurrenceDetails(taskDetails.recurrence!),
-                        ),
-                      ],
-                    ),
+                      if (result != null && result) {
+                        if (!context.mounted) return;
+
+                        await _deleteTask(context: context, task: taskDetails);
+                      }
+                    },
+                    child: const Text('Delete'),
                   ),
                 ],
-
-                const SizedBox(height: 20),
-
-                // Subtasks section
-                Consumer<SubtasksProvider>(
-                  child: CreateSubtaskForm(
-                    onSubmitForm: (String data) async {
-                      await _createSubtask(data);
+                builder: (_, MenuController controller, Widget? child) {
+                  return IconButton(
+                    focusNode: _buttonFocusNode,
+                    onPressed: () {
+                      if (controller.isOpen) {
+                        controller.close();
+                      } else {
+                        controller.open();
+                      }
                     },
-                  ),
-                  builder: (context, subtasksProvider, child) {
-                    final subtasks = subtasksProvider.activeSubtasks;
-                    final completedSubtasks =
-                        subtasksProvider.completedSubtasks;
-
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.purpleLight),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              top: 5,
-                              left: 10,
-                              right: 10,
-                              bottom: 5,
+                    icon: const Icon(Icons.more_vert),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          PhosphorIcons.note(),
+                          color: AppColors.purpleBase,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            taskDetails.title,
+                            softWrap: true,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.library_add,
-                                      color: AppColors.purpleBase,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (taskDetails.description != null)
+                      Text(taskDetails.description!),
+                    const SizedBox(height: 20),
+
+                    if (taskDetails.baseDateTime != null ||
+                        taskDetails.timeLabel != null)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.purpleLight),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 10,
+                                left: 10,
+                                right: 10,
+                                bottom: 0,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    PhosphorIcons.calendarCheck(),
+                                    color: AppColors.purpleBase,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Text(
+                                    'Date and Time',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: AppColors.gray500,
                                     ),
-                                    const SizedBox(width: 10),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(color: AppColors.purpleLight),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 5,
+                                left: 10,
+                                right: 10,
+                                bottom: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  if (taskDetails.baseDateTime != null)
                                     Text(
-                                      'Subtasks (${subtasks.length})',
+                                      DateFormat.yMMMEd().format(
+                                        taskDetails.baseDateTime!,
+                                      ),
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        color: AppColors.gray500,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
+                                  if (taskDetails.timeLabel != null)
+                                    Text(
+                                      ' at ${taskDetails.timeLabel!}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    if (taskDetails.recurrence != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.purpleLight),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 10,
+                                left: 10,
+                                right: 10,
+                                bottom: 0,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    PhosphorIcons.repeat(),
+                                    color: AppColors.purpleBase,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Text(
+                                    'Recurrence',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: AppColors.gray500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(color: AppColors.purpleLight),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: 5,
+                                left: 10,
+                                right: 10,
+                                bottom: 10,
+                              ),
+                              child: _recurrenceDetails(
+                                taskDetails.recurrence!,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Subtasks section
+                    Consumer<SubtasksProvider>(
+                      child: CreateSubtaskForm(
+                        onSubmitForm: (String data) async {
+                          await _createSubtask(data);
+                        },
+                      ),
+                      builder: (context, subtasksProvider, child) {
+                        final subtasks = subtasksProvider.activeSubtasks;
+                        final completedSubtasks =
+                            subtasksProvider.completedSubtasks;
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.purpleLight),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 5,
+                                  left: 10,
+                                  right: 10,
+                                  bottom: 5,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.library_add,
+                                          color: AppColors.purpleBase,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          'Subtasks (${subtasks.length})',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: AppColors.gray500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (child != null) child,
                                   ],
                                 ),
-                                if (child != null) child,
-                              ],
-                            ),
-                          ),
-
-                          if (subtasks.isNotEmpty)
-                            const Divider(
-                              color: AppColors.purpleLight,
-                              height: 0,
-                            ),
-
-                          // Subtasks list
-                          ImplicitlyAnimatedReorderableList<SubTask>(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            items: subtasks,
-                            areItemsTheSame: (a, b) => a.id == b.id,
-                            onReorderFinished: (item, from, to, newItems) {
-                              context.read<SubtasksProvider>().setSubtasksOrder(
-                                newItems,
-                              );
-                            },
-                            itemBuilder:
-                                (context, itemAnimation, subtask, index) {
-                                  return Reorderable(
-                                    key: ValueKey(subtask.id),
-                                    builder: (context, dragAnimation, inDrag) {
-                                      final t = dragAnimation.value;
-                                      final elevation = lerpDouble(0, 8, t);
-                                      final color = Color.lerp(
-                                        Colors.white,
-                                        Colors.white.withValues(alpha: 0.8),
-                                        t,
-                                      );
-
-                                      return AnimatedBuilder(
-                                        animation: dragAnimation,
-                                        builder: (context, _) {
-                                          return SizeFadeTransition(
-                                            sizeFraction: 0.7,
-                                            curve: Curves.easeOut,
-                                            animation: itemAnimation,
-                                            child: Material(
-                                              color: color,
-                                              elevation: elevation!,
-                                              type: MaterialType.transparency,
-                                              child: SubtaskTile(
-                                                subtask: subtask,
-                                                onToggleComplete: () async {
-                                                  await _toggleCompleteSubtask(
-                                                    context,
-                                                    subtask,
-                                                  );
-                                                },
-                                                onEditSubtask:
-                                                    (String title) async {
-                                                      await _editSubtask(
-                                                        subtaskId: subtask.id,
-                                                        title: title,
-                                                      );
-                                                    },
-                                                onDeleteSubtask: () async {
-                                                  await _deleteSubtask(subtask);
-                                                },
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    },
-                                  );
-                                },
-                            removeDuration: const Duration(milliseconds: 300),
-                            insertDuration: const Duration(milliseconds: 300),
-                            updateDuration: const Duration(milliseconds: 300),
-                          ),
-
-                          const Divider(color: AppColors.purpleLight),
-
-                          // Completed Subtasks section
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 4,
-                              horizontal: 16,
-                            ),
-                            child: ExpandablePanel(
-                              theme: ExpandableThemeData(
-                                headerAlignment:
-                                    ExpandablePanelHeaderAlignment.center,
-                                tapBodyToExpand: true,
-                                tapBodyToCollapse: true,
-                                hasIcon: true,
                               ),
-                              header: Text(
-                                'Completed Subtasks (${completedSubtasks.length})',
-                              ),
-                              collapsed: const SizedBox.shrink(),
 
-                              // Completed tasks list
-                              expanded: ImplicitlyAnimatedList<SubTask>(
+                              if (subtasks.isNotEmpty)
+                                const Divider(
+                                  color: AppColors.purpleLight,
+                                  height: 0,
+                                ),
+
+                              // Subtasks list
+                              ImplicitlyAnimatedReorderableList<SubTask>(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                items: completedSubtasks,
+                                items: subtasks,
                                 areItemsTheSame: (a, b) => a.id == b.id,
+                                onReorderFinished: (item, from, to, newItems) {
+                                  context
+                                      .read<SubtasksProvider>()
+                                      .setSubtasksOrder(newItems);
+                                },
                                 itemBuilder:
-                                    (context, animation, subtask, index) {
-                                      return SizeFadeTransition(
-                                        animation: animation,
-                                        curve: Curves.easeOut,
-                                        child: SubtaskTile(
-                                          subtask: subtask,
-                                          isDraggable: false,
-                                          onToggleComplete: () async {
-                                            await _toggleCompleteSubtask(
-                                              context,
-                                              subtask,
-                                            );
-                                          },
-                                          onEditSubtask: (String title) async {
-                                            await _editSubtask(
-                                              subtaskId: subtask.id,
-                                              title: title,
-                                            );
-                                          },
-                                          onDeleteSubtask: () async {
-                                            await _deleteSubtask(subtask);
-                                          },
-                                        ),
+                                    (context, itemAnimation, subtask, index) {
+                                      return Reorderable(
+                                        key: ValueKey(subtask.id),
+                                        builder: (context, dragAnimation, inDrag) {
+                                          final t = dragAnimation.value;
+                                          final elevation = lerpDouble(0, 8, t);
+                                          final color = Color.lerp(
+                                            Colors.white,
+                                            Colors.white.withValues(alpha: 0.8),
+                                            t,
+                                          );
+
+                                          return AnimatedBuilder(
+                                            animation: dragAnimation,
+                                            builder: (context, _) {
+                                              return SizeFadeTransition(
+                                                sizeFraction: 0.7,
+                                                curve: Curves.easeOut,
+                                                animation: itemAnimation,
+                                                child: Material(
+                                                  color: color,
+                                                  elevation: elevation!,
+                                                  type:
+                                                      MaterialType.transparency,
+                                                  child: SubtaskTile(
+                                                    subtask: subtask,
+                                                    onToggleComplete: () async {
+                                                      await _toggleCompleteSubtask(
+                                                        context,
+                                                        subtask,
+                                                      );
+                                                    },
+                                                    onEditSubtask:
+                                                        (String title) async {
+                                                          await _editSubtask(
+                                                            subtaskId:
+                                                                subtask.id,
+                                                            title: title,
+                                                          );
+                                                        },
+                                                    onDeleteSubtask: () async {
+                                                      await _deleteSubtask(
+                                                        subtask,
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
                                       );
                                     },
                                 removeDuration: const Duration(
@@ -774,18 +687,86 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                   milliseconds: 300,
                                 ),
                               ),
-                            ),
+
+                              const Divider(color: AppColors.purpleLight),
+
+                              // Completed Subtasks section
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                  horizontal: 16,
+                                ),
+                                child: ExpandablePanel(
+                                  theme: ExpandableThemeData(
+                                    headerAlignment:
+                                        ExpandablePanelHeaderAlignment.center,
+                                    tapBodyToExpand: true,
+                                    tapBodyToCollapse: true,
+                                    hasIcon: true,
+                                  ),
+                                  header: Text(
+                                    'Completed Subtasks (${completedSubtasks.length})',
+                                  ),
+                                  collapsed: const SizedBox.shrink(),
+
+                                  // Completed tasks list
+                                  expanded: ImplicitlyAnimatedList<SubTask>(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    items: completedSubtasks,
+                                    areItemsTheSame: (a, b) => a.id == b.id,
+                                    itemBuilder:
+                                        (context, animation, subtask, index) {
+                                          return SizeFadeTransition(
+                                            animation: animation,
+                                            curve: Curves.easeOut,
+                                            child: SubtaskTile(
+                                              subtask: subtask,
+                                              isDraggable: false,
+                                              onToggleComplete: () async {
+                                                await _toggleCompleteSubtask(
+                                                  context,
+                                                  subtask,
+                                                );
+                                              },
+                                              onEditSubtask:
+                                                  (String title) async {
+                                                    await _editSubtask(
+                                                      subtaskId: subtask.id,
+                                                      title: title,
+                                                    );
+                                                  },
+                                              onDeleteSubtask: () async {
+                                                await _deleteSubtask(subtask);
+                                              },
+                                            ),
+                                          );
+                                        },
+                                    removeDuration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                    insertDuration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                    updateDuration: const Duration(
+                                      milliseconds: 300,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

@@ -1,5 +1,4 @@
 import 'package:intl/intl.dart';
-import 'package:planme/domains/recurrence/recurrence_engine.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +8,7 @@ import 'package:planme/providers/subtasks_provider.dart';
 import 'package:planme/data/models/task_occurrence.dart';
 import 'package:planme/data/repositories/tasks_repository.dart';
 import 'package:planme/data/models/aggregates/task_details.dart';
-import 'package:planme/ui/screens/task_details/task_details_state.dart';
+import 'package:planme/domains/recurrence/recurrence_engine.dart';
 
 class TasksProvider with ChangeNotifier {
   final SubtasksProvider subtasksProvider;
@@ -37,40 +36,28 @@ class TasksProvider with ChangeNotifier {
   List<Task> get starredTasks =>
       _tasks.where((task) => task.isStarred).toList(growable: false);
 
-  TaskDetailsState _detailsState = const TaskDetailsState();
-  TaskDetailsState get detailsState => _detailsState;
-
   Future<void> loadAllTasks() async {
     _tasks = await tasksRepository.getAllTasks();
     notifyListeners();
   }
 
-  Future<Task> getTaskDetails(String taskId) async {
+  Task getTaskDetails(String taskId) {
     final task = _tasks.firstWhere((task) => task.id == taskId);
 
     return task;
   }
 
-  Future<void> loadTaskDetails(String taskId) async {
-    _detailsState = const TaskDetailsState(isLoading: true);
+  Future<void> createTask(Task task) async {
+    _tasks.add(task);
     notifyListeners();
 
     try {
-      final task = await getTaskDetails(taskId);
-      _detailsState = TaskDetailsState(task: task);
+      await tasksRepository.createTask(task);
     } catch (e) {
-      _detailsState = TaskDetailsState(error: e);
+      _tasks.removeWhere((item) => item.id == task.id);
+      notifyListeners();
+      rethrow;
     }
-
-    notifyListeners();
-  }
-
-  Future<void> createTask(Task task) async {
-    await tasksRepository.createTask(task);
-
-    _tasks.add(task);
-
-    await loadAllTasks();
   }
 
   Future<void> editTask(Task updatedTask) async {
@@ -80,10 +67,20 @@ class TasksProvider with ChangeNotifier {
       throw Exception('Task not found');
     }
 
-    _tasks[taskIndex] = updatedTask.copyWith(updatedAt: DateTime.now());
+    final oldTask = _tasks[taskIndex];
 
-    await loadTaskDetails(updatedTask.id);
-    await loadAllTasks();
+    final persisted = updatedTask.copyWith(updatedAt: DateTime.now());
+
+    _tasks[taskIndex] = persisted;
+    notifyListeners();
+
+    try {
+      await tasksRepository.updateTask(persisted);
+    } catch (e) {
+      _tasks[taskIndex] = oldTask;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> deleteTask(String taskId) async {
@@ -102,21 +99,31 @@ class TasksProvider with ChangeNotifier {
     await loadAllTasks();
   }
 
-  Future<void> setStarredStatus({
+  Future<void> toggleStarred({
     required String taskId,
     required bool isStarred,
   }) async {
     final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
+    if (taskIndex == -1) return;
 
-    if (taskIndex != -1) {
-      final current = _tasks[taskIndex];
+    final oldTask = _tasks[taskIndex];
 
-      _tasks[taskIndex] = current.copyWith(
-        isStarred: isStarred,
-        updatedAt: DateTime.now(),
-      );
+    final updatedTask = oldTask.copyWith(
+      isStarred: isStarred,
+      updatedAt: DateTime.now(),
+    );
 
+    // Atualização otimista em memória
+    _tasks[taskIndex] = updatedTask;
+    notifyListeners();
+
+    try {
+      await tasksRepository.updateTask(updatedTask);
+    } catch (e) {
+      // Em caso de erro, reverte e notifica
+      _tasks[taskIndex] = oldTask;
       notifyListeners();
+      rethrow;
     }
   }
 
@@ -128,15 +135,24 @@ class TasksProvider with ChangeNotifier {
 
     if (taskIndex == -1) return;
 
-    final current = _tasks[taskIndex];
+    final oldTask = _tasks[taskIndex];
 
-    _tasks[taskIndex] = current.copyWith(
+    final updatedTask = oldTask.copyWith(
       isCompleted: isCompleted,
       completedAt: isCompleted ? DateTime.now() : null,
       updatedAt: DateTime.now(),
     );
 
+    _tasks[taskIndex] = updatedTask;
     notifyListeners();
+
+    try {
+      await tasksRepository.updateTask(updatedTask);
+    } catch (e) {
+      _tasks[taskIndex] = oldTask;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   // ==========================================================
@@ -144,10 +160,10 @@ class TasksProvider with ChangeNotifier {
   // ==========================================================
 
   /// Uma ocorrência por task, agrupada por data ou "No date"
-  List<TaskSection> buildAllTaskSections(
-    DateTime now, [
+  List<TaskSection> buildAllTaskSections({
+    required DateTime now,
     bool onlyActives = false,
-  ]) {
+  }) {
     final tasks = onlyActives ? activeTasks : _tasks;
 
     final List<TaskOccurrence> occurrences = [];
@@ -186,10 +202,10 @@ class TasksProvider with ChangeNotifier {
     );
   }
 
-  List<TaskSection> buildFavoriteTasksSections(
-    DateTime now, [
+  List<TaskSection> buildFavoriteTasksSections({
+    required DateTime now,
     bool onlyActives = false,
-  ]) {
+  }) {
     final favoriteTasks = onlyActives
         ? starredTasks.where((task) => !task.isCompleted).toList()
         : starredTasks;

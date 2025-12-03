@@ -31,7 +31,8 @@ class _StarredTasksTabState extends State<StarredTasksTab> {
           child: Consumer<TasksProvider>(
             builder: (context, tasksProvider, child) {
               final tasksSections = tasksProvider.buildFavoriteTasksSections(
-                now,
+                now: now,
+                onlyActives: true,
               );
 
               if (tasksSections.isEmpty) {
