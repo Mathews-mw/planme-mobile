@@ -3,6 +3,7 @@ class SubTask {
   final String taskId;
   final String title;
   final String? description;
+  final int position;
   final bool isCompleted;
   final DateTime? completedAt;
   final DateTime createdAt;
@@ -13,6 +14,7 @@ class SubTask {
     required this.taskId,
     required this.title,
     this.description,
+    this.position = 0,
     this.isCompleted = false,
     this.completedAt,
     required this.createdAt,
@@ -24,6 +26,7 @@ class SubTask {
     String? taskId,
     String? title,
     String? description,
+    int? position,
     bool? isCompleted,
     DateTime? completedAt,
     DateTime? createdAt,
@@ -34,6 +37,7 @@ class SubTask {
       taskId: taskId ?? this.taskId,
       title: title ?? this.title,
       description: description ?? this.description,
+      position: position ?? this.position,
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
       createdAt: createdAt ?? this.createdAt,
@@ -44,7 +48,7 @@ class SubTask {
   @override
   String toString() {
     return 'SubTask(id: $id, taskId: $taskId, title: $title, description: $description, '
-        'isCompleted: $isCompleted, completedAt: $completedAt, '
+        'position: $position, isCompleted: $isCompleted, completedAt: $completedAt, '
         'createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 }

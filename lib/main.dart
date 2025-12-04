@@ -8,6 +8,7 @@ import 'package:planme/theme/theme.dart';
 import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/providers/subtasks_provider.dart';
 import 'package:planme/data/repositories/tasks_repository.dart';
+import 'package:planme/data/repositories/subtasks_repository.dart';
 import 'package:planme/data/database/isar/local_database_service.dart';
 
 void main() async {
@@ -22,16 +23,21 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   late final TasksRepository tasksRepository;
+  late final SubtasksRepository subtasksRepository;
 
   MyApp({super.key}) {
     tasksRepository = TasksRepository();
+    subtasksRepository = SubtasksRepository();
   }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SubtasksProvider()),
+        ChangeNotifierProvider(
+          create: (_) =>
+              SubtasksProvider(subtasksRepository: subtasksRepository),
+        ),
         ChangeNotifierProxyProvider<SubtasksProvider, TasksProvider>(
           create: (context) {
             final subtasks = Provider.of<SubtasksProvider>(

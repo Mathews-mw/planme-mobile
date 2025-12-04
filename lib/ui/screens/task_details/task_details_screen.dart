@@ -32,7 +32,23 @@ class TaskDetailsScreen extends StatefulWidget {
 }
 
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
+  bool _isLoading = true;
   final FocusNode _buttonFocusNode = FocusNode(debugLabel: 'Menu Button');
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<SubtasksProvider>().loadSubtasksByTaskId(
+        widget.taskId,
+      );
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -101,6 +117,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 3),
           backgroundColor: AppColors.lightBackground,
           action: SnackBarAction(
             label: 'UNDO',
@@ -565,6 +582,25 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         final subtasks = subtasksProvider.activeSubtasks;
                         final completedSubtasks =
                             subtasksProvider.completedSubtasks;
+
+                        if (_isLoading) {
+                          return Center(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text('Loading subtasks...'),
+                              ],
+                            ),
+                          );
+                        }
 
                         return Container(
                           decoration: BoxDecoration(

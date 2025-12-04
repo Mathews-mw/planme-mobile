@@ -33,7 +33,7 @@ class AllTasksTab extends StatelessWidget {
               // Header
               Container(
                 padding: const EdgeInsets.symmetric(
-                  vertical: 4,
+                  vertical: 16,
                   horizontal: 12,
                 ),
                 margin: EdgeInsets.only(
@@ -63,20 +63,6 @@ class AllTasksTab extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.swap_vert),
-                          onPressed: () {},
-                          tooltip: 'Sort',
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.more_vert),
-                          onPressed: () {},
-                          tooltip: 'More options',
-                        ),
-                      ],
                     ),
                   ],
                 ),

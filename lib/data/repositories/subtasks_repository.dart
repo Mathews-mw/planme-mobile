@@ -1,7 +1,8 @@
-// lib/data/repositories/subtasks_repository.dart
 import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 
+import 'package:planme/data/models/sub_task.dart';
+import 'package:planme/data/repositories/mappers/subtask_mapper.dart';
 import 'package:planme/data/database/isar/local_database_service.dart';
 import 'package:planme/data/database/isar/collections/subtask_isar.dart';
 
@@ -9,62 +10,102 @@ class SubtasksRepository {
   final Isar _database = LocalDatabaseService().isar;
   final _uuid = const Uuid();
 
-  Future<List<SubtaskIsar>> getByTaskId(String taskId) async {
-    return await _database.subtaskIsars
+  Future<List<SubTask>> fetchManyByTaskId(String taskId) async {
+    final subtasksData = await _database.subtaskIsars
         .filter()
         .taskIdEqualTo(taskId)
         .sortByPosition()
         .findAll();
+
+    return subtasksData.map((sub) {
+      return SubtaskMapper.toDomain(sub);
+    }).toList();
   }
 
-  Future<SubtaskIsar> createSubtask({
-    required String taskId,
-    required String title,
-    String? description,
-  }) async {
-    final now = DateTime.now();
+  Future<SubtaskIsar?> getByUid(String uid) async {
+    return await _database.subtaskIsars.filter().uidEqualTo(uid).findFirst();
+  }
 
-    // pega a última posição
+  Future<SubtaskIsar> createSubtask(SubTask subtask) async {
+    final data = SubtaskMapper.toIsar(subtask);
+
     final last = await _database.subtaskIsars
         .filter()
-        .taskIdEqualTo(taskId)
+        .taskIdEqualTo(subtask.taskId)
         .sortByPositionDesc()
         .findFirst();
+
     final nextPosition = (last?.position ?? -1) + 1;
 
-    final sub = SubtaskIsar()
-      ..uid = _uuid.v4()
-      ..taskId = taskId
-      ..title = title
-      ..description = description
-      ..position = nextPosition
-      ..createdAt = now;
+    data.position = nextPosition;
 
     await _database.writeTxn(() async {
-      await _database.subtaskIsars.put(sub);
+      await _database.subtaskIsars.put(data);
     });
 
-    return sub;
+    return data;
   }
 
-  Future<void> updateSubtask(SubtaskIsar subtask) async {
-    subtask.updatedAt = DateTime.now();
+  Future<void> updateSubtask(SubTask subtask) async {
+    final data = SubtaskMapper.toIsar(subtask);
 
     await _database.writeTxn(() async {
-      await _database.subtaskIsars.put(subtask);
+      await _database.subtaskIsars.put(data);
     });
   }
 
-  Future<void> deleteSubtask(SubtaskIsar subtask) async {
+  Future<SubtaskIsar> deleteSubtask(String uid) async {
+    final subtask = await getByUid(uid);
+
+    if (subtask == null) {
+      throw Exception('Subtask not found');
+    }
+
     await _database.writeTxn(() async {
       await _database.subtaskIsars.delete(subtask.id);
     });
+
+    return subtask;
   }
 
-  Future<void> updateOrder(List<SubtaskIsar> ordered) async {
+  Future<SubtaskIsar> restore({
+    required SubTask subtask,
+    required int position,
+  }) async {
+    final data = SubtaskMapper.toIsar(subtask);
+
+    final subtaskInCurrentPosition = await _database.subtaskIsars
+        .filter()
+        .positionEqualTo(position)
+        .sortByPositionDesc()
+        .findFirst();
+
+    if (subtaskInCurrentPosition != null) {
+      data.position = position;
+      subtaskInCurrentPosition.position = position + 1;
+
+      await _database.writeTxn(() async {
+        await _database.subtaskIsars.putAll([data, subtaskInCurrentPosition]);
+      });
+    }
+
+    data.position = position;
+
     await _database.writeTxn(() async {
-      for (var i = 0; i < ordered.length; i++) {
-        final s = ordered[i];
+      await _database.subtaskIsars.put(data);
+    });
+
+    return data;
+  }
+
+  Future<void> updateOrder(List<SubTask> ordered) async {
+    final dataOrdered = ordered.map((sub) {
+      return SubtaskMapper.toIsar(sub);
+    }).toList();
+
+    await _database.writeTxn(() async {
+      for (var i = 0; i < dataOrdered.length; i++) {
+        final s = dataOrdered[i];
         s.position = i;
 
         await _database.subtaskIsars.put(s);

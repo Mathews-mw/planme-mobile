@@ -21,7 +21,7 @@ class TasksProvider with ChangeNotifier {
     RecurrenceEngine? recurrenceEngine,
   }) : _recurrenceEngine = recurrenceEngine ?? const RecurrenceEngine();
 
-  final uuid = Uuid();
+  final uuid = const Uuid();
 
   List<Task> _tasks = [];
 

@@ -51,7 +51,7 @@ class _StarredTasksTabState extends State<StarredTasksTab> {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            vertical: 4,
+                            vertical: 16,
                             horizontal: 12,
                           ),
                           decoration: BoxDecoration(
@@ -77,20 +77,6 @@ class _StarredTasksTabState extends State<StarredTasksTab> {
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
                                 ),
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.swap_vert),
-                                    onPressed: () {},
-                                    tooltip: 'Sort',
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.more_vert),
-                                    onPressed: () {},
-                                    tooltip: 'More options',
-                                  ),
-                                ],
                               ),
                             ],
                           ),
