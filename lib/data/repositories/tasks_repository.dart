@@ -61,10 +61,7 @@ class TasksRepository {
 
     await _database.writeTxn(() async {
       // subtasks com FK taskId => deletar também
-      await _database.subtaskIsars
-          .filter()
-          .taskIdEqualTo(task.id.toString())
-          .deleteAll();
+      await _database.subtaskIsars.filter().taskIdEqualTo(task.uid).deleteAll();
 
       await _database.taskIsars.delete(task.id);
     });

@@ -9,15 +9,18 @@ import 'package:planme/data/models/task_occurrence.dart';
 import 'package:planme/data/repositories/tasks_repository.dart';
 import 'package:planme/data/models/aggregates/task_details.dart';
 import 'package:planme/domains/recurrence/recurrence_engine.dart';
+import 'package:planme/domains/notifications/task_notification_scheduler.dart';
 
 class TasksProvider with ChangeNotifier {
-  final SubtasksProvider subtasksProvider;
   final TasksRepository tasksRepository;
+  final SubtasksProvider subtasksProvider;
   final RecurrenceEngine _recurrenceEngine;
+  final TaskNotificationScheduler notificationScheduler;
 
   TasksProvider({
     required this.subtasksProvider,
     required this.tasksRepository,
+    required this.notificationScheduler,
     RecurrenceEngine? recurrenceEngine,
   }) : _recurrenceEngine = recurrenceEngine ?? const RecurrenceEngine();
 
@@ -39,12 +42,17 @@ class TasksProvider with ChangeNotifier {
   Future<void> loadAllTasks() async {
     _tasks = await tasksRepository.getAllTasks();
     notifyListeners();
+
+    // ressincronizar as notificações agendadas ao carregar
+    await notificationScheduler.resyncAll(_tasks);
   }
 
-  Task getTaskDetails(String taskId) {
-    final task = _tasks.firstWhere((task) => task.id == taskId);
-
-    return task;
+  Task? getTaskDetails(String id) {
+    try {
+      return _tasks.firstWhere((t) => t.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> createTask(Task task) async {
@@ -53,6 +61,7 @@ class TasksProvider with ChangeNotifier {
 
     try {
       await tasksRepository.createTask(task);
+      await notificationScheduler.scheduleForTask(task);
     } catch (e) {
       _tasks.removeWhere((item) => item.id == task.id);
       notifyListeners();
@@ -76,6 +85,8 @@ class TasksProvider with ChangeNotifier {
 
     try {
       await tasksRepository.updateTask(persisted);
+      await notificationScheduler.cancelForTask(updatedTask.id);
+      await notificationScheduler.scheduleForTask(updatedTask);
     } catch (e) {
       _tasks[taskIndex] = oldTask;
       notifyListeners();
@@ -84,16 +95,30 @@ class TasksProvider with ChangeNotifier {
   }
 
   Future<void> deleteTask(String taskId) async {
-    await subtasksProvider.deleteAllByTaskId(taskId);
+    final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
 
-    _tasks.removeWhere((task) => task.id == taskId);
+    if (taskIndex == -1) {
+      throw Exception('Task not found');
+    }
 
-    await loadAllTasks();
+    final currentTask = _tasks[taskIndex];
+
+    _tasks.removeWhere((t) => t.id == taskId);
+    notifyListeners();
+
+    try {
+      await tasksRepository.deleteTaskByUid(taskId);
+      await notificationScheduler.cancelForTask(taskId);
+    } catch (e) {
+      _tasks[taskIndex] = currentTask;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> restoreTask(TaskDetails taskDetails) async {
-    _tasks.add(taskDetails.task);
-
+    // _tasks.add(taskDetails.task);
+    await tasksRepository.createTask(taskDetails.task);
     await subtasksProvider.restoreSubtasks(taskDetails.subtasks);
 
     await loadAllTasks();
@@ -131,6 +156,7 @@ class TasksProvider with ChangeNotifier {
     required String taskId,
     required bool isCompleted,
   }) async {
+    print('Task id to be completed: $taskId => $isCompleted');
     final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
 
     if (taskIndex == -1) return;

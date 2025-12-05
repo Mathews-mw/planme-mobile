@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:planme/domains/notifications/services/local_notifications_service.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -70,15 +71,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Task deleted',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.lightBackground,
+          content: Text('Task deleted'),
           action: SnackBarAction(
             label: 'UNDO',
-            textColor: AppColors.purpleBase,
             onPressed: () async {
               if (deletedTask != null) {
                 await context.read<TasksProvider>().restoreTask(deletedTask);
@@ -88,9 +83,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
     }
-
-    // se você quiser recarregar depois de voltar (por caso de edição),
-    // pode chamar _loadTasksForCurrentRange() de novo aqui.
   }
 
   @override
@@ -103,6 +95,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: AppColors.lightBackground,
       appBar: CustomAppBar(
         title: 'Hi, Mathews',
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final notificationService = LocalNotificationsService.instance;
+
+              await notificationService.showNotification(
+                title: 'Task notification',
+                body:
+                    'Remind you about New task. It is start on 12 Dec at 7:30 AM.',
+              );
+            },
+            icon: Icon(Icons.send),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           // isScrollable: true,

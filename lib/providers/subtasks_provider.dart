@@ -140,6 +140,13 @@ class SubtasksProvider with ChangeNotifier {
 
   Future<void> restoreSubtasks(List<SubTask> subtasks) async {
     _subtasks.addAll(subtasks);
+
+    for (var subtask in subtasks) {
+      await subtasksRepository.restore(
+        subtask: subtask,
+        position: subtask.position,
+      );
+    }
   }
 
   Future<void> toggleCompleted({

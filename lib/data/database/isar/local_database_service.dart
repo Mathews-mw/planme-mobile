@@ -1,6 +1,7 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'package:planme/data/database/isar/collections/user_isar.dart';
 import 'package:planme/data/database/isar/collections/task_isar.dart';
 import 'package:planme/data/database/isar/collections/subtask_isar.dart';
 
@@ -18,7 +19,7 @@ class LocalDatabaseService {
     final dir = await getApplicationDocumentsDirectory();
 
     _isar = await Isar.open(
-      [TaskIsarSchema, SubtaskIsarSchema],
+      [UserIsarSchema, TaskIsarSchema, SubtaskIsarSchema],
       directory: dir.path,
       inspector: true,
     );

@@ -10,6 +10,8 @@ import 'package:planme/providers/subtasks_provider.dart';
 import 'package:planme/data/repositories/tasks_repository.dart';
 import 'package:planme/data/repositories/subtasks_repository.dart';
 import 'package:planme/data/database/isar/local_database_service.dart';
+import 'package:planme/domains/notifications/task_notification_scheduler.dart';
+import 'package:planme/domains/notifications/services/local_notifications_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,16 +20,66 @@ void main() async {
 
   await LocalDatabaseService().initialize();
 
+  await LocalNotificationsService.instance.initNotifications();
+  LocalNotificationsService.instance.getPermissions();
+
+  // final details = await LocalNotificationsService.instance.notificationsPlugin
+  //     .getNotificationAppLaunchDetails();
+
+  // if (details?.didNotificationLaunchApp ?? false) {
+  //   final payload = details!.notificationResponse?.payload;
+  //   final actionId = details!.notificationResponse?.actionId;
+
+  //   // aqui dá pra mandar direto pro handler onNotificationAction
+  //   print('Notification payload: $payload | Notification action: $actionId');
+  // }
+
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   late final TasksRepository tasksRepository;
   late final SubtasksRepository subtasksRepository;
+  late final TaskNotificationScheduler notificationScheduler;
 
   MyApp({super.key}) {
     tasksRepository = TasksRepository();
     subtasksRepository = SubtasksRepository();
+    notificationScheduler = TaskNotificationScheduler();
+  }
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Handler para qualquer clique das notificações
+    LocalNotificationsService
+        .instance
+        .onNotificationAction = (String taskId, String? actionId) async {
+      if (!mounted) return;
+
+      // Ação "complete task"
+      if (actionId == 'complete_task') {
+        final tasksProvider = context.read<TasksProvider>();
+
+        await tasksProvider.toggleCompleted(taskId: taskId, isCompleted: true);
+
+        // await tasksProvider.scheduleNextOccurrenceNotification(taskId);
+
+        return;
+      }
+
+      // Apenas navegar para tela de detalhes da task
+      AppRouter.router.pushNamed(
+        AppRouter.taskDetails,
+        pathParameters: {'taskId': taskId},
+      );
+    };
   }
 
   @override
@@ -36,7 +88,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (_) =>
-              SubtasksProvider(subtasksRepository: subtasksRepository),
+              SubtasksProvider(subtasksRepository: widget.subtasksRepository),
         ),
         ChangeNotifierProxyProvider<SubtasksProvider, TasksProvider>(
           create: (context) {
@@ -47,7 +99,8 @@ class MyApp extends StatelessWidget {
 
             return TasksProvider(
               subtasksProvider: subtasks,
-              tasksRepository: tasksRepository,
+              tasksRepository: widget.tasksRepository,
+              notificationScheduler: widget.notificationScheduler,
             );
           },
           update: (context, subtasks, previous) {
@@ -55,7 +108,8 @@ class MyApp extends StatelessWidget {
             return previous ??
                 TasksProvider(
                   subtasksProvider: subtasks,
-                  tasksRepository: tasksRepository,
+                  tasksRepository: widget.tasksRepository,
+                  notificationScheduler: widget.notificationScheduler,
                 );
           },
         ),

@@ -8,7 +8,7 @@ import 'package:implicitly_animated_reorderable_list_2/implicitly_animated_reord
 import 'package:planme/theme/app_colors.dart';
 import 'package:planme/providers/tasks_provider.dart';
 import 'package:planme/data/models/task_section.dart';
-import 'package:planme/domains/agenda/agenda_range_filter.dart';
+import 'package:planme/domains/agenda/types/agenda_range_filter.dart';
 import 'package:planme/components/task_components/no_tasks_card.dart';
 import 'package:planme/ui/screens/tasks_tabs/completed_tasks_section.dart';
 import 'package:planme/components/task_components/task_section_widget.dart';

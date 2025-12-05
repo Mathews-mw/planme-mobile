@@ -8,6 +8,12 @@ final ThemeData lightTheme = theme.copyWith(
   brightness: Brightness.light,
   colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurpleAccent),
   textTheme: GoogleFonts.latoTextTheme(),
+  snackBarTheme: theme.snackBarTheme.copyWith(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: AppColors.purpleBase,
+    actionTextColor: Colors.white,
+    contentTextStyle: TextStyle(color: Colors.white),
+  ),
   datePickerTheme: DatePickerThemeData(
     backgroundColor: AppColors.lightBackground,
     headerBackgroundColor: AppColors.purpleBase,

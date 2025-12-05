@@ -62,6 +62,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         widget.taskId,
       );
 
+      if (taskDetails == null) return;
+
       await context.read<TasksProvider>().toggleStarred(
         taskId: taskDetails.id,
         isStarred: !taskDetails.isStarred,
@@ -150,8 +152,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         subtaskId: subtask.id,
         isCompleted: !subtask.isCompleted,
       );
-
-      // await subtaskProvider.loadSubtasksByTaskId(subtask.taskId);
     } catch (e) {
       print('toggle complete subtask error: $e');
     }
@@ -309,6 +309,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     return Consumer<TasksProvider>(
       builder: (context, tasksProvider, _) {
         final taskDetails = tasksProvider.getTaskDetails(widget.taskId);
+
+        if (taskDetails == null) {
+          return const Scaffold(body: Center(child: Text('Task not found')));
+        }
 
         return Scaffold(
           backgroundColor: AppColors.lightBackground,

@@ -25,6 +25,8 @@ class RecurrenceEngine {
   TaskOccurrence? getNextOccurrenceForTask(Task task, {DateTime? from}) {
     final DateTime reference = from ?? DateTime.now();
 
+    if (task.isCompleted) return null;
+
     // Task sem data base não tem próxima ocorrência
     if (task.baseDateTime == null) return null;
 
